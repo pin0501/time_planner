@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* :root contains color variables for light and dark mode */
     :root {
       --color-bg: #f8f9fa;
       --color-text: #212529;
@@ -98,7 +97,38 @@
     .btn-danger:hover:not(:disabled) { background-color: #c92a2a; }
     .btn-ai { background: linear-gradient(45deg, var(--color-work), var(--color-study)); color: white; }
     .btn-ai:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4); }
-    .date-nav-btn.active { background-color: var(--color-work); color: white; font-weight: 600; }
+    
+    .date-nav-btn {
+        transition: all 0.2s ease;
+        border: 1px solid var(--color-input-border);
+    }
+    .year-btn { 
+        padding: 0.5rem 1rem !important; 
+        font-weight: 700; 
+        background-color: var(--color-bg);
+    }
+    .month-btn { 
+        padding: 0.375rem 0.875rem !important; 
+        background-color: var(--color-bg);
+    }
+    .day-btn { 
+        padding: 0.25rem 0.75rem !important; 
+        font-size: 0.875rem !important; 
+        background-color: var(--color-bg);
+    }
+    .date-nav-btn.active {
+        background-color: var(--color-work);
+        border-color: var(--color-work);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+    }
+    .date-nav-btn:hover:not(.active) {
+        transform: translateY(-1px);
+        border-color: var(--color-text-muted);
+    }
+
+    
     .task-item { background-color: var(--color-bg); border-radius: 8px; }
     .task-item.done .task-main-info { opacity: 0.6; }
     .task-item.done .task-name { text-decoration: line-through; }
@@ -118,31 +148,12 @@
         transition: background-color 0.2s ease;
     }
     .icon-btn:hover { background-color: var(--color-btn-secondary-hover); }
-    .icon-btn svg {
-        width: 20px;
-        height: 20px;
-        color: var(--color-text-muted);
-        transition: color 0.2s ease;
-    }
+    .icon-btn svg { width: 20px; height: 20px; color: var(--color-text-muted); transition: color 0.2s ease; }
     .icon-btn.active svg { color: var(--color-work); }
 
-    .popover {
-        position: absolute;
-        bottom: calc(100% + 8px); 
-        right: 0;
-        background-color: var(--color-card-bg);
-        border: 1px solid var(--color-card-border);
-        border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        z-index: 100;
-        display: none; 
-    }
+    .popover { position: absolute; bottom: calc(100% + 8px); right: 0; background-color: var(--color-card-bg); border: 1px solid var(--color-card-border); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); z-index: 100; display: none; }
     .popover.visible { display: block; }
-    .time-popover, .duration-popover {
-        width: 120px;
-        max-height: 200px;
-        overflow-y: auto;
-    }
+    .time-popover, .duration-popover { width: 120px; max-height: 200px; overflow-y: auto; }
     .popover-item { padding: 0.5rem 1rem; cursor: pointer; }
     .popover-item:hover { background-color: var(--color-btn-secondary-bg); }
     
@@ -224,7 +235,7 @@
           </div>
         </div>
          <div class="mt-6 text-center">
-            <button onclick="showAIPlannerModal()" class="btn btn-ai text-base py-3 px-6">✨ AI 全域規劃</button>
+            <button onclick="showAIPlannerModal()" class="btn btn-ai text-base py-3 px-6">AI 全域規劃</button>
         </div>
     </div>
 
@@ -393,16 +404,13 @@
 
   <script>
     let tasks = [];
-    // Date navigation state
     let selectedDate = '';
     let selectedYear = null;
     let selectedMonth = null;
-    
     let selectedAddTaskCategory = 'default';
     let selectedAddTaskTime = '';
     let selectedAddTaskDuration = '60';
 
-    // AI planner state cache
     const aiPlannerState = {
         goal: '',
         goalType: '無',
@@ -420,9 +428,9 @@
         chores:   { name: '家務', color: '#64748b' },
         default:  { name: '預設', color: '#9ca3af' }
     };
-
-    // --- Core Functions: Setup, Event Listeners, State Management ---
     
+    // --- All functions are defined first ---
+
     function setupEventListeners() {
         document.getElementById('date-start').addEventListener('change', handleDateChange);
         document.getElementById('date-end').addEventListener('change', handleDateChange);
@@ -538,16 +546,14 @@
         if (start && end && start <= end) {
             localStorage.setItem('plannerDateStart', start);
             localStorage.setItem('plannerDateEnd', end);
-
-            const startDate = new Date(start);
-            if(!selectedYear) selectedYear = startDate.getFullYear();
-            if(!selectedMonth) selectedMonth = startDate.getMonth();
             
             if (!selectedDate || new Date(selectedDate) < new Date(start) || new Date(selectedDate) > new Date(end)) {
                 selectedDate = start;
-                selectedYear = startDate.getFullYear();
-                selectedMonth = startDate.getMonth();
             }
+            const currentSelected = new Date(selectedDate);
+            selectedYear = currentSelected.getFullYear();
+            selectedMonth = currentSelected.getMonth();
+            
             renderDateNavigation();
             renderTasks();
             updateCurrentTimeIndicator();
@@ -556,13 +562,15 @@
 
     function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
     
-    // --- Rendering Functions: Dates, Tasks, Timeline ---
-
     function renderDateNavigation() {
         const container = document.getElementById('date-navigation');
         container.innerHTML = '';
-        const start = new Date(document.getElementById('date-start').value);
-        const end = new Date(document.getElementById('date-end').value);
+        const startStr = document.getElementById('date-start').value;
+        const endStr = document.getElementById('date-end').value;
+        if (!startStr || !endStr) return;
+        
+        const start = new Date(startStr);
+        const end = new Date(endStr);
         const duration = (end - start) / (1000 * 60 * 60 * 24);
 
         const showYearSelector = duration > 90 && start.getFullYear() !== end.getFullYear();
@@ -612,7 +620,8 @@
         wrapper.className = 'flex flex-wrap gap-2';
         items.forEach(item => {
             const btn = document.createElement('button');
-            btn.className = 'btn btn-secondary date-nav-btn px-4 py-2 text-sm';
+            const typeClass = `${type}-btn`;
+            btn.className = `btn date-nav-btn ${typeClass}`;
             
             let value, text;
             if (type === 'year') {
@@ -748,8 +757,6 @@
         });
     }
 
-    // --- Helper & Utility Functions ---
-
     function getDatesBetween(start, end) {
       const dates = [];
       let current = new Date(new Date(start).setUTCHours(0,0,0,0));
@@ -816,8 +823,6 @@
         }
     }
 
-    // --- Task CRUD & IO Functions ---
-    
     function addTaskFromInput(){
       const input = document.getElementById('task-input');
       const name = input.value.trim();
@@ -961,8 +966,6 @@
       URL.revokeObjectURL(url);
     }
     
-    // --- Modal and UI Functions ---
-    
     function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
 
@@ -994,9 +997,8 @@
         }, 5000);
     }
     
-    // --- Gemini AI Functions ---
     const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
-    const API_KEY = "AIzaSyCGmO68BJGHhrWDRKe8Y9c2lqJfwZCnVgY"; // 您的 API 金鑰
+    const API_KEY = ""; // 您的 API 金鑰
 
     function showAIPlannerModal() {
       const start = document.getElementById('date-start').value;
@@ -1027,18 +1029,18 @@
 
         let prompt = `你是一位經驗豐富的AI專案規劃助理，擅長根據使用者的總體目標，安排出合理、密集、具可行性的每日行程。
           請依據以下資訊進行任務規劃：
-          1️⃣ 使用者目標：「${userGoal}」  
+          1️⃣ 使用者目標：「${aiPlannerState.goal}」  
           2️⃣ 時間範圍：${startDate} 至 ${endDate}  
-          3️⃣ 目標類型：「${goalType}」（例如：工作專案 / 考試準備 / 技能學習 / 個人目標等）  
-          4️⃣ 安排強度：「${intensityLevel}」（輕鬆：每日1~2小時；中等：每日3~5小時；高強度：每日6小時以上）  
-          5️⃣ 時段偏好：${preferredTimeSlot}（例如：上午 / 下午 / 晚上 / 任意）  
+          3️⃣ 目標類型：「${aiPlannerState.goalType}」
+          4️⃣ 安排強度：「${aiPlannerState.intensity}」
+          5️⃣ 時段偏好：「${aiPlannerState.timeSlot}」
           ---
           請將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至每一天，避免過度鬆散（例如只安排1~2天）**。
           ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
           - 'taskName'：具體明確的子任務名稱  
           - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇  
-          - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120）  
-          - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍內）  
+          - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）  
+          - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）  
           - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）  
           - 'details'：1～2 句的簡要說明，清楚任務內容與重點  
           ⚠️ 請確保：
@@ -1046,7 +1048,7 @@
           - 任務時間不重疊
           - 每個子任務都合理可執行，不過度瑣碎，也不過度籠統
           - 若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先聽課，再練習）
-          ]`
+          `;
         if (aiPlannerState.goalType !== '無') prompt += `\n這個計畫的目標類型是「${aiPlannerState.goalType}」。請根據此類型調整任務的性質和語氣。`;
         if (aiPlannerState.intensity !== '無') {
             let intensityDesc = {'輕鬆': '每日總時長約1-2小時', '中等': '每日總時長約3-5小時', '高強度': '每日總時長約6小時以上'}[aiPlannerState.intensity];
