@@ -862,18 +862,7 @@
         showToast('任務更新成功！', 'success');
     }
 
-
     // IO Functions
-    function exportTasks() {
-      if (tasks.length === 0) { showToast('沒有任務可以匯出。', 'error'); return; }
-      const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `tasks_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
     function importTasks(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -884,12 +873,40 @@
           if (Array.isArray(importedTasks)) {
             tasks = importedTasks;
             saveTasks();
+
+            // FIX: Automatically adjust date range after import
+            if (tasks.length > 0) {
+              const dates = tasks.map(t => new Date(t.date));
+              const minDate = new Date(Math.min(...dates));
+              const maxDate = new Date(Math.max(...dates));
+              const minDateStr = minDate.toISOString().split('T')[0];
+              const maxDateStr = maxDate.toISOString().split('T')[0];
+              document.getElementById('date-start').value = minDateStr;
+              document.getElementById('date-end').value = maxDateStr;
+              selectedDate = minDateStr; 
+            }
+            
             showToast('成功匯入任務！', 'success');
-            handleDateChange();
-          } else { throw new Error('檔案格式不符'); }
-        } catch (err) { showToast('匯入失敗，請檢查檔案格式。', 'error'); }
+            handleDateChange(); // Re-render with new date range
+          } else { 
+            throw new Error('檔案格式不符'); 
+          }
+        } catch (err) { 
+          showToast('匯入失敗，請檢查檔案格式。', 'error'); 
+        }
       };
       reader.readAsText(file);
+    }
+
+    function exportTasks() {
+      if (tasks.length === 0) { showToast('沒有任務可以匯出。', 'error'); return; }
+      const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tasks_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // Timeline and time indicator
@@ -939,7 +956,6 @@
 
         let prompt = `作為一個頂尖的專案規劃助理，請深入分析以下總體目標，並將其拆解成一系列具體、可執行的子任務。對於每一個子任務，你必須提供以下資訊：1. 'taskName': 具體的任務名稱。2. 'category': 根據任務性質，從 'work', 'study', 'personal', 'sport', 'chores' 中選擇一個最適合的分類。3. 'duration': 評估此子任務的複雜度和常規耗時，給出一個合理的持續時間（單位為分鐘，例如 30, 60, 90, 120）。4. 'date': 將此任務安排在 ${startDate} 到 ${endDate} 的日期範圍內的一個合適日期 (YYYY-MM-DD格式)。5. 'time': 在安排的日期中，給出一個建議的開始時間 (HH:MM格式)。6. 'details': 根據任務內容，生成1-2句的簡要說明。`;
         
-        // 如果規劃的起始日是今天，就加入時間限制
         if (startDate === today) {
             prompt += `\n\n重要限制：今天是 ${today}，現在的時間是 ${currentTime}。因此，今天所有任務的開始時間都必須晚于 ${currentTime}。`;
         }
@@ -951,10 +967,9 @@
         try {
             const generatedPlan = await callGeminiForPlan(prompt, startDate, endDate);
             generatedPlan.forEach(task => {
-                // 前端再次確認時間，以防萬一
                 if (task.date === today && task.time < currentTime) {
                     console.warn(`AI 仍規劃了過時的任務: ${task.name} at ${task.time}。將自動忽略。`);
-                    return; // 跳過這個過時的任務
+                    return;
                 }
                 
                 if (new Date(task.date) >= new Date(startDate) && new Date(task.date) <= new Date(endDate)) {
@@ -969,7 +984,7 @@
             showToast('AI 計畫已成功生成！', 'success');
         } catch (error) {
             console.error("Gemini API Error:", error);
-            showToast("AI 計畫生成失敗，請稍後再試。", "error");
+            showToast(error.message, "error");
         } finally {
             hideModal('loading-modal');
         }
@@ -980,12 +995,16 @@
         const result = await fetchGemini(payload);
         return JSON.parse(result);
     }
+
     async function fetchGemini(payload){
         const response = await fetch(`${API_BASE_URL}?key=${API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!response.ok) {
             const errorBody = await response.text();
             console.error("API Error Response:", errorBody);
-            throw new Error(`API call failed with status: ${response.status}`);
+            if (response.status === 401) {
+                throw new Error('API 認證失敗 (401)。請確認 API 金鑰是否已正確設定。');
+            }
+            throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
         }
         const result = await response.json();
         if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0].text) {
