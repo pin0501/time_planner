@@ -998,7 +998,7 @@
     }
     
     const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
-    const API_KEY = ""; // 您的 API 金鑰
+    const API_KEY = "AIzaSyCGmO68BJGHhrWDRKe8Y9c2lqJfwZCnVgY"; // 您的 API 金鑰
 
     function showAIPlannerModal() {
       const start = document.getElementById('date-start').value;
@@ -1037,12 +1037,12 @@
           ---
           請將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至每一天，避免過度鬆散（例如只安排1~2天）**。
           ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
-          - 'taskName'：具體明確的子任務名稱  
-          - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇  
-          - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）  
-          - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）  
-          - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）  
-          - 'details'：1～2 句的簡要說明，清楚任務內容與重點  
+          - 'taskName'：具體明確的子任務名稱
+          - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇
+          - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）
+          - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）
+          - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）
+          - 'details'：幾句的說明，清楚任務內容與重點細項
           ⚠️ 請確保：
           - 每天安排的總任務時間符合指定強度
           - 任務時間不重疊
