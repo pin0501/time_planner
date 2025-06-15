@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 智慧時間規劃工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* :root contains color variables for light and dark mode */
+    :root {
+      --color-bg: #f8f9fa;
+      --color-text: #212529;
+      --color-card-bg: #ffffff;
+      --color-card-border: #e9ecef;
+      --color-input-border: #ced4da;
+      --color-input-bg: #fff;
+      --color-btn-secondary-bg: #e9ecef;
+      --color-btn-secondary-text: #495057;
+      --color-btn-secondary-hover: #dee2e6;
+      --color-text-muted: #adb5bd;
+      --color-text-heading: #343a40;
+      --timeline-hour-border: #e9ecef;
+      --timeline-hour-dot-border: #dee2e6;
+      
+      --timeline-hour-height: 60px;
+      --color-work: #2563eb;
+      --color-study: #10b981;
+      --color-personal: #ec4899;
+      --color-sport: #f97316;
+      --color-chores: #94a3b8;
+      --color-default: #d1d5db;
+    }
+
+    html.dark {
+      --color-bg: #121212;
+      --color-text: #e0e0e0;
+      --color-card-bg: #1e1e1e;
+      --color-card-border: #333;
+      --color-input-border: #444;
+      --color-input-bg: #2a2a2a;
+      --color-btn-secondary-bg: #333;
+      --color-btn-secondary-text: #e0e0e0;
+      --color-btn-secondary-hover: #444;
+      --color-text-muted: #888;
+      --color-text-heading: #f1f3f5;
+      --timeline-hour-border: #333;
+      --timeline-hour-dot-border: #444;
+    }
+
+    body {
+      background-color: var(--color-bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--color-text);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .card {
+      background-color: var(--color-card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--color-card-border);
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .form-input {
+        border: 1px solid var(--color-input-border);
+        background-color: var(--color-input-bg);
+        color: var(--color-text);
+        border-radius: 8px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        padding: 0.75rem 1rem;
+    }
+    .form-input:focus {
+        border-color: var(--color-work);
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+        outline: none;
+    }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background-color: var(--color-work); color: white; }
+    .btn-primary:hover:not(:disabled) { background-color: #0284c7; }
+    .btn-secondary { background-color: var(--color-btn-secondary-bg); color: var(--color-btn-secondary-text); }
+    .btn-secondary:hover:not(:disabled) { background-color: var(--color-btn-secondary-hover); }
+    .btn-danger { background-color: #e03131; color: white; }
+    .btn-danger:hover:not(:disabled) { background-color: #c92a2a; }
+    .btn-ai { background: linear-gradient(45deg, var(--color-work), var(--color-study)); color: white; }
+    .btn-ai:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4); }
+    .date-btn.active { background-color: var(--color-work); color: white; font-weight: 600; }
+    .task-item { background-color: var(--color-bg); border-radius: 8px; }
+    .task-item.done .task-main-info { opacity: 0.6; }
+    .task-item.done .task-name { text-decoration: line-through; }
+    .task-item.highlight { background-color: rgba(37, 99, 235, 0.1); }
+    .category-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-right: 0.75rem; }
+
+    .icon-btn {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background-color: var(--color-btn-secondary-bg);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .icon-btn:hover { background-color: var(--color-btn-secondary-hover); }
+    .icon-btn svg {
+        width: 20px;
+        height: 20px;
+        color: var(--color-text-muted);
+        transition: color 0.2s ease;
+    }
+    .icon-btn.active svg { color: var(--color-work); }
+
+    .popover {
+        position: absolute;
+        bottom: calc(100% + 8px); 
+        right: 0;
+        background-color: var(--color-card-bg);
+        border: 1px solid var(--color-card-border);
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        z-index: 100;
+        display: none; 
+    }
+    .popover.visible { display: block; }
+    .time-popover, .duration-popover {
+        width: 120px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .popover-item { padding: 0.5rem 1rem; cursor: pointer; }
+    .popover-item:hover { background-color: var(--color-btn-secondary-bg); }
+    
+    .category-popover { flex-direction: column; gap: 0.25rem; padding: 0.5rem; width: 160px; }
+    #category-popover.visible { display: flex; }
+    .category-popover-item { display: flex; align-items: center; padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; border: 1px solid transparent; }
+    .category-popover-item:hover { background-color: var(--color-bg); }
+    .category-popover-item.active { border-color: var(--category-border-color, var(--color-work)); background-color: rgba(37, 99, 235, 0.1); }
+    .category-popover-item .color-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 0.75rem; flex-shrink: 0; }
+    .category-popover-item .category-name { font-weight: 500; color: var(--color-text); }
+
+    .timeline-container { position: relative; border-color: var(--color-card-border); }
+    .timeline-grid { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: grid; grid-template-rows: repeat(24, var(--timeline-hour-height)); }
+    .timeline-hour { position: relative; border-top: 1px solid var(--timeline-hour-border); padding-left: 0.5rem; font-size: 0.75rem; color: var(--color-text-muted); }
+    .timeline-hour::after { content: ''; position: absolute; top: 50%; left: 60px; right: 0; border-top: 1px dotted var(--timeline-hour-dot-border); }
+    .timeline-task-block { position: absolute; left: 65px; right: 5px; display: flex; flex-direction: column; justify-content: flex-start; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; overflow: hidden; z-index: 10; box-sizing: border-box; transition: all 0.2s ease; cursor: pointer; color: white; background-image: linear-gradient(to top right, var(--task-bg-start, #a3b1c6), var(--task-bg-end, #868e96)); border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid var(--task-border-color, #555); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .timeline-task-block:hover { transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.1); z-index: 20; }
+    .timeline-task-block.done { filter: saturate(0.3); background: var(--color-btn-secondary-bg); border-left-color: var(--color-text-muted); color: var(--color-text-muted); }
+    .timeline-task-block .task-name { font-weight: 600; line-height: 1.3; }
+    .timeline-task-block.done .task-name { text-decoration: line-through; }
+    .timeline-task-block .task-time-range { font-size: 0.75rem; opacity: 0.9; margin-top: auto; }
+    .timeline-current-time { position: absolute; left: 60px; right: 0; height: 2px; background-color: #e03131; z-index: 30; }
+    .timeline-current-time::before { content: ''; position: absolute; left: -5px; top: -3px; width: 8px; height: 8px; background-color: #e03131; border-radius: 50%; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: var(--color-card-bg); padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; }
+    .loader { width: 48px; height: 48px; border: 5px solid rgba(255,255,255,0.3); border-bottom-color: var(--color-work); border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+    @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    /* Toast Notification */
+    #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.75rem; }
+    .toast { display: flex; align-items: center; padding: 1rem 1.5rem; background-color: var(--color-card-bg); color: var(--color-text); border: 1px solid var(--color-card-border); border-left-width: 4px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateX(120%); animation: slideIn 0.5s forwards, slideOut 0.5s 4.5s forwards; }
+    .toast.success { border-left-color: var(--color-study); }
+    .toast.error { border-left-color: #e03131; }
+    @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+    @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(120%); } }
+    
+    /* Dark Mode Toggle Switch */
+    .theme-switch-wrapper { display: flex; align-items: center; gap: 0.5rem; }
+    .theme-switch { display: inline-block; height: 26px; position: relative; width: 50px; }
+    .theme-switch input { display:none; }
+    .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; }
+    .slider:before { background-color: #fff; bottom: 4px; content: ""; height: 18px; left: 4px; position: absolute; transition: .4s; width: 18px; }
+    input:checked + .slider { background-color: #2196F3; }
+    input:checked + .slider:before { transform: translateX(24px); }
+    .slider.round { border-radius: 34px; }
+    .slider.round:before { border-radius: 50%; }
+
+    /* Task Details Accordion */
+    .task-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-in-out;
+      background-color: var(--color-bg);
+      padding: 0 1rem;
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+    }
+    .task-details.show {
+        max-height: 200px; /* Adjust as needed */
+        padding: 0.5rem 1rem 1rem;
+    }
+    .details-toggle-btn {
+        transition: transform 0.3s ease;
+    }
+    .details-toggle-btn.open {
+        transform: rotate(90deg);
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="text-center mb-6">
+        <h1 class="text-3xl sm:text-4xl font-bold" style="color: var(--color-text-heading);">智慧時間規劃工具</h1>
+        <p class="mt-2" style="color: var(--color-text-muted);">一個專注於效率與清晰度的任務規劃器</p>
+        <div class="flex justify-center items-center mt-4 gap-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <div class="theme-switch-wrapper">
+              <label class="theme-switch" for="theme-checkbox">
+                  <input type="checkbox" id="theme-checkbox" />
+                  <div class="slider round"></div>
+              </label>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </div>
+    </header>
+
+    <div class="card p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+          <div>
+            <label for="date-start" class="block mb-2 font-semibold">起始日期</label>
+            <input id="date-start" type="date" class="form-input w-full">
+          </div>
+          <div>
+            <label for="date-end" class="block mb-2 font-semibold">結束日期</label>
+            <input id="date-end" type="date" class="form-input w-full">
+          </div>
+        </div>
+         <div class="mt-6 text-center">
+            <button onclick="showAIPlannerModal()" class="btn btn-ai text-base py-3 px-6">✨ AI 全域規劃</button>
+        </div>
+    </div>
+
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- 任務清單 -->
+      <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold" style="color: var(--color-text-heading);">每日任務清單</h2>
+            <div id="date-display" class="font-semibold" style="color: var(--color-text);"></div>
+        </div>
+        <div id="date-buttons" class="flex flex-wrap gap-3 mb-6"></div>
+        
+        <div class="space-y-3 mb-4">
+            <div class="flex items-center gap-3">
+                <input id="task-input" type="text" placeholder="輸入新任務後按 Enter..." class="form-input flex-grow">
+                <div class="flex-shrink-0 flex items-center gap-2">
+                     <div id="time-selector-btn" class="icon-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <div id="time-popover" class="popover time-popover"></div>
+                     </div>
+                     <div id="duration-selector-btn" class="icon-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h15.75c.621 0 1.125.504 1.125 1.125v6.75C21 20.496 20.496 21 19.875 21H4.125A1.125 1.125 0 0 1 3 19.875v-6.75ZM12 3v9" /></svg>
+                         <div id="duration-popover" class="popover duration-popover"></div>
+                     </div>
+                    <div id="category-selector-btn" class="icon-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                        </svg>
+                        <div id="category-popover" class="popover category-popover"></div>
+                    </div>
+                </div>
+            </div>
+             <button onclick="addTaskFromInput()" class="btn btn-primary w-full gap-2">新增任務</button>
+        </div>
+        <ul id="task-list" class="mt-6 space-y-3"></ul>
+      </div>
+
+      <!-- 時間軸 -->
+      <div class="card p-6">
+        <h2 class="text-2xl font-bold mb-4" style="color: var(--color-text-heading);">當日時間軸</h2>
+        <div id="timeline-container" class="timeline-container h-[600px] overflow-y-auto border rounded-lg">
+            <div id="timeline-grid" class="timeline-grid"></div>
+            <div id="timeline-tasks" class="relative"></div>
+            <div id="timeline-current-time" class="timeline-current-time hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 控制按鈕 -->
+    <div class="mt-8 flex flex-wrap justify-center gap-4">
+      <button onclick="exportTasks()" class="btn btn-secondary">匯出 JSON</button>
+      <label class="btn btn-secondary cursor-pointer">
+        匯入 JSON
+        <input type="file" accept="application/json" onchange="importTasks(event)" class="hidden">
+      </label>
+      <button onclick="confirmClearTasks()" class="btn btn-danger">清除所有任務</button>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="ai-planner-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 class="text-xl font-bold mb-4">✨ AI 全域規劃</h3>
+      <p class="mb-4">輸入您的總體目標，AI 會將其拆解，並自動分配到 <strong id="ai-planner-range" class="text-blue-600"></strong> 的日期範圍内。</p>
+      <textarea id="ai-goal-input" class="form-input w-full h-24" placeholder="例如：規劃一趟為期 5 天的日本關西之旅"></textarea>
+      <div class="mt-4 flex justify-end gap-3">
+        <button onclick="hideModal('ai-planner-modal')" class="btn btn-secondary">取消</button>
+        <button id="ai-generate-btn" onclick="generateGlobalPlan()" class="btn btn-primary">生成計畫</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-task-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3 class="text-xl font-bold mb-6">編輯任務</h3>
+        <input type="hidden" id="edit-task-index">
+        <div class="space-y-4">
+            <div>
+                <label for="edit-task-name" class="block mb-2 font-semibold">任務名稱</label>
+                <input id="edit-task-name" type="text" class="form-input w-full">
+            </div>
+            <div>
+                <label for="edit-task-details" class="block mb-2 font-semibold">詳細說明</label>
+                <textarea id="edit-task-details" class="form-input w-full" rows="3"></textarea>
+            </div>
+             <div>
+                <label for="edit-task-time" class="block mb-2 font-semibold">開始時間</label>
+                <input id="edit-task-time" type="time" class="form-input w-full">
+            </div>
+             <div>
+                <label for="edit-task-duration" class="block mb-2 font-semibold">持續時間 (分鐘)</label>
+                <input id="edit-task-duration" type="number" min="1" class="form-input w-full">
+            </div>
+            <div>
+                <label for="edit-task-category" class="block mb-2 font-semibold">分類</label>
+                <select id="edit-task-category" class="form-input w-full"></select>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button onclick="hideModal('edit-task-modal')" class="btn btn-secondary">取消</button>
+            <button onclick="updateTask()" class="btn btn-primary">儲存變更</button>
+        </div>
+    </div>
+  </div>
+  
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3 id="confirm-modal-title" class="text-xl font-bold mb-4"></h3>
+        <p id="confirm-modal-body" class="mb-6"></p>
+        <div class="flex justify-end gap-3">
+            <button id="confirm-modal-cancel" class="btn btn-secondary">取消</button>
+            <button id="confirm-modal-confirm" class="btn btn-danger">確認</button>
+        </div>
+    </div>
+  </div>
+
+  <div id="loading-modal" class="modal-overlay hidden">
+    <div class="text-center">
+      <div class="loader"></div>
+      <p class="text-white text-lg mt-4">AI 正在思考中，請稍候...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script>
+    let tasks = [];
+    let selectedDate = '';
+    let selectedAddTaskCategory = 'default';
+    let selectedAddTaskTime = '';
+    let selectedAddTaskDuration = '60';
+
+    const HOUR_HEIGHT = 60; 
+    
+    const CATEGORIES = {
+        work:     { name: '工作', color: '#0ea5e9' },
+        study:    { name: '學習', color: '#14b8a6' },
+        personal: { name: '私人', color: '#f43f5e' },
+        sport:    { name: '運動', color: '#f59e0b' },
+        chores:   { name: '家務', color: '#64748b' },
+        default:  { name: '預設', color: '#9ca3af' }
+    };
+
+    // DOMContentLoaded: Main initialization function
+    document.addEventListener('DOMContentLoaded', () => {
+      tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
+      document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
+      
+      setupPopovers();
+      setupEventListeners();
+      setupTheme();
+      renderTimelineGrid();
+      handleDateChange();
+      setupCurrentTimeIndicator();
+    });
+    
+    function setupEventListeners() {
+        document.getElementById('date-start').addEventListener('change', handleDateChange);
+        document.getElementById('date-end').addEventListener('change', handleDateChange);
+        document.getElementById('theme-checkbox').addEventListener('change', toggleTheme);
+        document.getElementById('task-input').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                addTaskFromInput();
+            }
+        });
+    }
+
+    // Theme setup and toggle
+    function setupTheme() {
+        const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        document.getElementById('theme-checkbox').checked = isDarkMode;
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+        }
+    }
+
+    function toggleTheme(e) {
+        if (e.target.checked) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('darkMode', 'true');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('darkMode', 'false');
+        }
+    }
+
+    function setupPopovers() {
+        const popoverConfigs = [
+            { btnId: 'time-selector-btn', popoverId: 'time-popover' },
+            { btnId: 'duration-selector-btn', popoverId: 'duration-popover' },
+            { btnId: 'category-selector-btn', popoverId: 'category-popover' }
+        ];
+
+        const timePopover = document.getElementById('time-popover');
+        timePopover.innerHTML = '';
+        for (let h = 0; h < 24; h++) {
+            ['00', '30'].forEach(m => {
+                const time = `${String(h).padStart(2, '0')}:${m}`;
+                const item = document.createElement('div');
+                item.className = 'popover-item';
+                item.textContent = time;
+                item.onclick = () => {
+                    selectedAddTaskTime = time;
+                    document.getElementById('time-selector-btn').classList.add('active');
+                    togglePopover('time-popover', false);
+                };
+                timePopover.appendChild(item);
+            });
+        }
+        
+        const durationPopover = document.getElementById('duration-popover');
+        durationPopover.innerHTML = '';
+        [30, 60, 90, 120, 180].forEach(d => {
+            const item = document.createElement('div');
+            item.className = 'popover-item';
+            item.textContent = `${d} 分鐘`;
+            item.onclick = () => {
+                selectedAddTaskDuration = d.toString();
+                document.getElementById('duration-selector-btn').classList.add('active');
+                togglePopover('duration-popover', false);
+            };
+            durationPopover.appendChild(item);
+        });
+        
+        const categoryPopover = document.getElementById('category-popover');
+        categoryPopover.innerHTML = ''; 
+        Object.keys(CATEGORIES).forEach(key => {
+            const category = CATEGORIES[key];
+            const item = document.createElement('div');
+            item.className = 'category-popover-item';
+            item.dataset.categoryKey = key;
+            
+            item.innerHTML = `
+                <span class="color-dot" style="background-color: ${category.color};"></span>
+                <span class="category-name">${category.name}</span>
+            `;
+            
+            item.onclick = () => {
+                selectAddTaskCategory(key);
+                togglePopover('category-popover', false);
+            };
+            categoryPopover.appendChild(item);
+        });
+        
+        popoverConfigs.forEach(config => {
+            document.getElementById(config.btnId).addEventListener('click', e => {
+                e.stopPropagation(); 
+                togglePopover(config.popoverId);
+            });
+            document.getElementById(config.popoverId).addEventListener('click', e => {
+                e.stopPropagation();
+            });
+        });
+        
+        document.addEventListener('click', () => {
+            popoverConfigs.forEach(config => togglePopover(config.popoverId, false));
+        });
+        
+        selectAddTaskCategory(selectedAddTaskCategory);
+    }
+
+    function togglePopover(popoverId, forceState) {
+        const popover = document.getElementById(popoverId);
+        const shouldBeVisible = typeof forceState === 'boolean' ? forceState : !popover.classList.contains('visible');
+        
+        document.querySelectorAll('.popover').forEach(p => {
+            if(p.id !== popoverId) p.classList.remove('visible');
+        });
+        popover.classList.toggle('visible', shouldBeVisible);
+    }
+    
+    function selectAddTaskCategory(categoryKey) {
+        selectedAddTaskCategory = categoryKey;
+        const categoryColor = CATEGORIES[categoryKey]?.color || CATEGORIES.default.color;
+        const btn = document.getElementById('category-selector-btn');
+        document.querySelectorAll('#category-popover .category-popover-item').forEach(el => {
+            const isActive = el.dataset.categoryKey === categoryKey;
+            el.classList.toggle('active', isActive);
+            if (isActive) {
+                el.style.setProperty('--category-border-color', categoryColor);
+            } else {
+                el.style.removeProperty('--category-border-color');
+            }
+        });
+
+        btn.classList.toggle('active', categoryKey !== 'default');
+    }
+    
+    function handleDateChange() {
+        const start = document.getElementById('date-start').value;
+        const end = document.getElementById('date-end').value;
+        if (start && end) {
+            localStorage.setItem('plannerDateStart', start);
+            localStorage.setItem('plannerDateEnd', end);
+            if (!selectedDate || new Date(selectedDate) < new Date(start) || new Date(selectedDate) > new Date(end)) {
+                selectedDate = start;
+            }
+            renderDateButtons(start, end);
+            renderTasks();
+            updateCurrentTimeIndicator();
+        }
+    }
+    
+    function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
+    
+    function renderDateButtons(start, end) {
+      const container = document.getElementById('date-buttons');
+      container.innerHTML = '';
+      const dates = getDatesBetween(start, end);
+      dates.forEach(date => {
+        const btn = document.createElement('button');
+        btn.textContent = date.substring(5);
+        btn.className = `btn btn-secondary date-btn ${date === selectedDate ? 'active' : ''}`;
+        btn.onclick = () => {
+          selectedDate = date;
+          renderDateButtons(start, end); 
+          renderTasks();
+          updateCurrentTimeIndicator();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function getDatesBetween(start, end) {
+      const dates = [];
+      let current = new Date(new Date(start).setUTCHours(0,0,0,0));
+      const stop = new Date(new Date(end).setUTCHours(0,0,0,0));
+      while (current <= stop) {
+        dates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function renderTasks() {
+      document.getElementById('date-display').textContent = selectedDate;
+      const list = document.getElementById('task-list');
+      list.innerHTML = '';
+      const filteredTasks = tasks
+        .map((task, index) => ({ ...task, originalIndex: index })) 
+        .filter(task => task.date === selectedDate)
+        .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+
+      if (filteredTasks.length === 0) {
+          list.innerHTML = `<div class="text-center py-6" style="color: var(--color-text-muted);">這天沒有任務</div>`;
+      } else {
+        filteredTasks.forEach(task => {
+            const li = document.createElement('li');
+            li.id = `task-item-${task.originalIndex}`;
+            li.className = 'task-item';
+            if (task.done) li.classList.add('done');
+            
+            const timeRange = getTaskTimeRange(task.time, task.duration);
+
+            li.innerHTML = `
+                <div class="task-main-info flex items-center p-3">
+                    <button title="顯示/隱藏說明" class="details-toggle-btn text-gray-400 hover:text-blue-500 mr-2 ${task.details ? '' : 'invisible'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                    <div class="category-dot" style="background-color: ${CATEGORIES[task.category]?.color || CATEGORIES.default.color};"></div>
+                    <input type="checkbox" ${task.done ? 'checked' : ''} class="w-5 h-5 rounded-sm mr-2 border-gray-300 text-blue-500 focus:ring-blue-500 flex-shrink-0" onchange="toggleTask(${task.originalIndex})">
+                    <div class="flex-grow">
+                        <span class="task-name font-medium">${task.name}</span>
+                        ${timeRange ? `<div class="text-sm" style="color: var(--color-text-muted);">${timeRange}</div>` : ''}
+                    </div>
+                    <button title="編輯任務" class="ml-4 text-gray-400 hover:text-blue-500" onclick="showEditModal(${task.originalIndex})">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <button title="刪除任務" class="ml-2 text-gray-400 hover:text-red-500" onclick="confirmDeleteTask(${task.originalIndex})">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+                ${task.details ? `<div class="task-details ml-8">${task.details.replace(/\n/g, '<br>')}</div>` : ''}
+            `;
+            list.appendChild(li);
+        });
+        // Add event listeners for the new details toggles
+        document.querySelectorAll('.details-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', toggleDetails);
+        });
+      }
+      renderTimeline(filteredTasks);
+    }
+    
+    function getTaskTimeRange(time, duration) {
+        if (!time || !duration) return null;
+        const [startHour, startMinute] = time.split(':').map(Number);
+        const endMoment = new Date();
+        endMoment.setHours(startHour, startMinute + parseInt(duration), 0);
+        const endTime = `${String(endMoment.getHours()).padStart(2,'0')}:${String(endMoment.getMinutes()).padStart(2,'0')}`;
+        return `${time} - ${endTime}`;
+    }
+
+    function toggleDetails(event) {
+        const btn = event.currentTarget;
+        const taskItem = btn.closest('.task-item');
+        const details = taskItem.querySelector('.task-details');
+        if (details) {
+            btn.classList.toggle('open');
+            details.classList.toggle('show');
+        }
+    }
+
+    function renderTimelineGrid() {
+        const grid = document.getElementById('timeline-grid');
+        grid.innerHTML = '';
+        for (let hour = 0; hour < 24; hour++) {
+            const hourEl = document.createElement('div');
+            hourEl.className = 'timeline-hour';
+            hourEl.textContent = `${String(hour).padStart(2, '0')}:00`;
+            grid.appendChild(hourEl);
+        }
+    }
+
+    function renderTimeline(dayTasks) {
+        const tasksContainer = document.getElementById('timeline-tasks');
+        tasksContainer.innerHTML = '';
+        const tasksWithTime = dayTasks.filter(task => task.time && task.duration).sort((a,b) => a.time.localeCompare(b.time));
+        
+        const layout = [];
+        tasksWithTime.forEach(task => {
+            const [hour, minute] = task.time.split(':').map(Number);
+            const startMinutes = hour * 60 + minute;
+            const endMinutes = startMinutes + parseInt(task.duration);
+            let placed = false;
+            for (let i = 0; i < layout.length; i++) {
+                if (layout[i].every(t => endMinutes <= t.startMinutes || startMinutes >= t.endMinutes)) {
+                    layout[i].push({ ...task, startMinutes, endMinutes });
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) { layout.push([{ ...task, startMinutes, endMinutes }]); }
+        });
+        
+        const totalColumns = layout.length || 1;
+        layout.forEach((column, colIndex) => {
+            column.forEach(task => {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'timeline-task-block';
+                if (task.done) taskEl.classList.add('done');
+                const top = (task.startMinutes / 60) * HOUR_HEIGHT;
+                const height = (task.duration / 60) * HOUR_HEIGHT;
+                const taskColor = CATEGORIES[task.category]?.color || CATEGORIES.default.color;
+                const timeRange = getTaskTimeRange(task.time, task.duration);
+                
+                taskEl.style.top = `${top}px`;
+                taskEl.style.height = `${Math.max(height, 25)}px`;
+                taskEl.style.left = `calc(65px + ${(colIndex / totalColumns) * 100}%)`;
+                taskEl.style.width = `calc(${(1 / totalColumns) * 100}% - 7px)`;
+                
+                const rgb = hexToRgb(taskColor);
+                if(rgb){
+                    taskEl.style.setProperty('--task-bg-start', `rgba(${rgb}, 0.85)`);
+                    taskEl.style.setProperty('--task-bg-end', `rgba(${rgb}, 0.65)`);
+                }
+                taskEl.style.setProperty('--task-border-color', taskColor);
+                taskEl.innerHTML = `<strong class="task-name">${task.name}</strong><span class="task-time-range">${timeRange}</span>`;
+                taskEl.onclick = () => highlightTaskInList(task.originalIndex);
+                tasksContainer.appendChild(taskEl);
+            });
+        });
+    }
+
+    function highlightTaskInList(index) {
+        document.querySelectorAll('.task-item').forEach(el => el.classList.remove('highlight'));
+        const targetElement = document.getElementById(`task-item-${index}`);
+        if(targetElement) {
+            targetElement.classList.add('highlight');
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function hexToRgb(hex) {
+        if(!hex) return null;
+        let r = 0, g = 0, b = 0;
+        if (hex.length == 4) { r = "0x" + hex[1] + hex[1]; g = "0x" + hex[2] + hex[2]; b = "0x" + hex[3] + hex[3]; } 
+        else if (hex.length == 7) { r = "0x" + hex[1] + hex[2]; g = "0x" + hex[3] + hex[4]; b = "0x" + hex[5] + hex[6]; }
+        return `${+r},${+g},${+b}`;
+    }
+
+    function addTaskFromInput(){
+      const input = document.getElementById('task-input');
+      const name = input.value.trim();
+      if (!name) { showToast('請輸入任務內容！', 'error'); return; }
+      if (!selectedDate) { showToast('請先選擇一個日期！', 'error'); return; }
+      
+      createTask(name, selectedAddTaskTime, selectedDate, selectedAddTaskDuration, selectedAddTaskCategory, '');
+      
+      input.value = '';
+      selectedAddTaskTime = '';
+      selectedAddTaskDuration = '60';
+      selectAddTaskCategory('default');
+      document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('active'));
+      showToast('任務新增成功！', 'success');
+    }
+
+    function createTask(name, time, date, duration, category, details) {
+      if (!name || !date) return;
+      tasks.push({ name, time: time || '', date, duration: duration || '60', category: category || 'default', details: details || '', done: false });
+      saveTasks();
+      if (date === selectedDate) {
+          renderTasks();
+      }
+    }
+    
+    function toggleTask(index) {
+      tasks[index].done = !tasks[index].done;
+      saveTasks();
+      renderTasks();
+    }
+    
+    function confirmDeleteTask(index) {
+        showConfirmation('確定要刪除此任務嗎？', '此操作無法復原。', () => {
+            deleteTask(index);
+        });
+    }
+
+    function deleteTask(index) {
+        tasks.splice(index, 1);
+        saveTasks();
+        renderTasks();
+        showToast('任務已刪除', 'success');
+    }
+
+    function confirmClearTasks() {
+        showConfirmation('確定要清除所有任務嗎？', '此操作將清除所有日期的所有任務，無法復原。', () => {
+            clearTasks();
+        });
+    }
+
+    function clearTasks() {
+      tasks = [];
+      saveTasks();
+      handleDateChange();
+      showToast('所有任務已清除', 'success');
+    }
+
+    // Modal and Toast logic
+    function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function showConfirmation(title, body, onConfirm) {
+        document.getElementById('confirm-modal-title').textContent = title;
+        document.getElementById('confirm-modal-body').textContent = body;
+        
+        const confirmBtn = document.getElementById('confirm-modal-confirm');
+        const cancelBtn = document.getElementById('confirm-modal-cancel');
+
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        newConfirmBtn.addEventListener('click', () => {
+            onConfirm();
+            hideModal('confirm-modal');
+        });
+
+        cancelBtn.onclick = () => hideModal('confirm-modal');
+        showModal('confirm-modal');
+    }
+    
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+
+    // Edit Task Functions
+    function showEditModal(index) {
+        const task = tasks[index];
+        if (!task) return;
+        
+        document.getElementById('edit-task-index').value = index;
+        document.getElementById('edit-task-name').value = task.name;
+        document.getElementById('edit-task-details').value = task.details || '';
+        document.getElementById('edit-task-time').value = task.time;
+        document.getElementById('edit-task-duration').value = task.duration;
+        
+        const categorySelect = document.getElementById('edit-task-category');
+        categorySelect.innerHTML = '';
+        Object.keys(CATEGORIES).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = CATEGORIES[key].name;
+            if (key === task.category) {
+                option.selected = true;
+            }
+            categorySelect.appendChild(option);
+        });
+
+        showModal('edit-task-modal');
+    }
+    
+    function updateTask() {
+        const index = document.getElementById('edit-task-index').value;
+        if (index === '' || !tasks[index]) return;
+        
+        tasks[index].name = document.getElementById('edit-task-name').value;
+        tasks[index].details = document.getElementById('edit-task-details').value;
+        tasks[index].time = document.getElementById('edit-task-time').value;
+        tasks[index].duration = document.getElementById('edit-task-duration').value;
+        tasks[index].category = document.getElementById('edit-task-category').value;
+        
+        saveTasks();
+        renderTasks();
+        hideModal('edit-task-modal');
+        showToast('任務更新成功！', 'success');
+    }
+
+
+    // IO Functions
+    function exportTasks() {
+      if (tasks.length === 0) { showToast('沒有任務可以匯出。', 'error'); return; }
+      const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tasks_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    function importTasks(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedTasks = JSON.parse(e.target.result);
+          if (Array.isArray(importedTasks)) {
+            tasks = importedTasks;
+            saveTasks();
+            showToast('成功匯入任務！', 'success');
+            handleDateChange();
+          } else { throw new Error('檔案格式不符'); }
+        } catch (err) { showToast('匯入失敗，請檢查檔案格式。', 'error'); }
+      };
+      reader.readAsText(file);
+    }
+
+    // Timeline and time indicator
+    function setupCurrentTimeIndicator() {
+        updateCurrentTimeIndicator();
+        setInterval(updateCurrentTimeIndicator, 60000); 
+    }
+
+    function updateCurrentTimeIndicator() {
+        const indicator = document.getElementById('timeline-current-time');
+        const today = new Date().toISOString().split('T')[0];
+        if (selectedDate === today) {
+            indicator.classList.remove('hidden');
+            const now = new Date();
+            const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+            const topPosition = (minutesSinceMidnight / 60) * HOUR_HEIGHT;
+            indicator.style.top = `${topPosition}px`;
+        } else {
+            indicator.classList.add('hidden');
+        }
+    }
+    
+    // Gemini AI Functions
+    const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+    const API_KEY = ""; // 您的 API 金鑰
+    function showAIPlannerModal() {
+      const start = document.getElementById('date-start').value;
+      const end = document.getElementById('date-end').value;
+      if (!start || !end) {
+          showToast("請先設定有效的起始和結束日期！", "error");
+          return;
+      }
+      document.getElementById('ai-planner-range').textContent = `${start} 到 ${end}`;
+      showModal('ai-planner-modal');
+    }
+
+    async function generateGlobalPlan() {
+        const goal = document.getElementById('ai-goal-input').value.trim();
+        if (!goal) { showToast('請輸入您的目標！', 'error'); return; }
+        
+        const startDate = document.getElementById('date-start').value;
+        const endDate = document.getElementById('date-end').value;
+        
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        let prompt = `作為一個頂尖的專案規劃助理，請深入分析以下總體目標，並將其拆解成一系列具體、可執行的子任務。對於每一個子任務，你必須提供以下資訊：1. 'taskName': 具體的任務名稱。2. 'category': 根據任務性質，從 'work', 'study', 'personal', 'sport', 'chores' 中選擇一個最適合的分類。3. 'duration': 評估此子任務的複雜度和常規耗時，給出一個合理的持續時間（單位為分鐘，例如 30, 60, 90, 120）。4. 'date': 將此任務安排在 ${startDate} 到 ${endDate} 的日期範圍內的一個合適日期 (YYYY-MM-DD格式)。5. 'time': 在安排的日期中，給出一個建議的開始時間 (HH:MM格式)。6. 'details': 根據任務內容，生成1-2句的簡要說明。`;
+        
+        // 如果規劃的起始日是今天，就加入時間限制
+        if (startDate === today) {
+            prompt += `\n\n重要限制：今天是 ${today}，現在的時間是 ${currentTime}。因此，今天所有任務的開始時間都必須晚于 ${currentTime}。`;
+        }
+        
+        prompt += `\n\n總體目標是：「${goal}」 你的回覆必須是嚴格的 JSON 陣列格式，不包含任何額外的說明或 markdown 語法。`;
+
+        showModal('loading-modal');
+        hideModal('ai-planner-modal');
+        try {
+            const generatedPlan = await callGeminiForPlan(prompt, startDate, endDate);
+            generatedPlan.forEach(task => {
+                // 前端再次確認時間，以防萬一
+                if (task.date === today && task.time < currentTime) {
+                    console.warn(`AI 仍規劃了過時的任務: ${task.name} at ${task.time}。將自動忽略。`);
+                    return; // 跳過這個過時的任務
+                }
+                
+                if (new Date(task.date) >= new Date(startDate) && new Date(task.date) <= new Date(endDate)) {
+                   createTask(task.taskName, task.time, task.date, task.duration, task.category, task.details);
+                } else {
+                    console.warn(`AI suggested a task outside the date range: ${task.date}. Placing it on the start date.`);
+                    createTask(task.taskName, task.time, startDate, task.duration, task.category, task.details);
+                }
+            });
+            document.getElementById('ai-goal-input').value = '';
+            renderTasks(); 
+            showToast('AI 計畫已成功生成！', 'success');
+        } catch (error) {
+            console.error("Gemini API Error:", error);
+            showToast("AI 計畫生成失敗，請稍後再試。", "error");
+        } finally {
+            hideModal('loading-modal');
+        }
+    }
+
+    async function callGeminiForPlan(prompt, startDate, endDate) {
+        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { taskName: { type: "STRING", description: "具體的任務名稱" }, date: { type: "STRING", description: `任務的日期 (YYYY-MM-DD)，必須介於 ${startDate} 和 ${endDate} 之間` }, time: { type: "STRING", description: "建議的任務時間 (HH:MM)" }, duration: {type: "STRING", description: "任務的預估持續時間(分鐘)"}, category: { type: "STRING", description: "任務分類(work, study, personal, sport, chores)" }, details: {type: "STRING", description: "任務的簡要說明"} }, required: ["taskName", "date", "time", "duration", "category", "details"] } } } };
+        const result = await fetchGemini(payload);
+        return JSON.parse(result);
+    }
+    async function fetchGemini(payload){
+        const response = await fetch(`${API_BASE_URL}?key=${API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("API Error Response:", errorBody);
+            throw new Error(`API call failed with status: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0].text) {
+            return result.candidates[0].content.parts[0].text;
+        } else {
+            console.warn("Unexpected API response structure:", result);
+            if (result.candidates && result.candidates[0].finishReason !== 'STOP') {
+                throw new Error(`API call finished with reason: ${result.candidates[0].finishReason}`);
+            }
+            throw new Error("Invalid response structure from Gemini API.");
+        }
+    }
+  </script>
+</body>
+</html>
