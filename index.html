@@ -63,15 +63,16 @@
       border: 1px solid var(--color-card-border);
       transition: background-color 0.3s, border-color 0.3s;
     }
-    .form-input {
+    .form-input, .form-select {
         border: 1px solid var(--color-input-border);
         background-color: var(--color-input-bg);
         color: var(--color-text);
         border-radius: 8px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
         padding: 0.75rem 1rem;
+        width: 100%;
     }
-    .form-input:focus {
+    .form-input:focus, .form-select:focus {
         border-color: var(--color-work);
         box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
         outline: none;
@@ -97,7 +98,7 @@
     .btn-danger:hover:not(:disabled) { background-color: #c92a2a; }
     .btn-ai { background: linear-gradient(45deg, var(--color-work), var(--color-study)); color: white; }
     .btn-ai:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4); }
-    .date-btn.active { background-color: var(--color-work); color: white; font-weight: 600; }
+    .date-nav-btn.active { background-color: var(--color-work); color: white; font-weight: 600; }
     .task-item { background-color: var(--color-bg); border-radius: 8px; }
     .task-item.done .task-main-info { opacity: 0.6; }
     .task-item.done .task-name { text-decoration: line-through; }
@@ -171,7 +172,6 @@
     .loader { width: 48px; height: 48px; border: 5px solid rgba(255,255,255,0.3); border-bottom-color: var(--color-work); border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
     @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    /* Toast Notification */
     #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.75rem; }
     .toast { display: flex; align-items: center; padding: 1rem 1.5rem; background-color: var(--color-card-bg); color: var(--color-text); border: 1px solid var(--color-card-border); border-left-width: 4px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateX(120%); animation: slideIn 0.5s forwards, slideOut 0.5s 4.5s forwards; }
     .toast.success { border-left-color: var(--color-study); }
@@ -179,7 +179,6 @@
     @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
     @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(120%); } }
     
-    /* Dark Mode Toggle Switch */
     .theme-switch-wrapper { display: flex; align-items: center; gap: 0.5rem; }
     .theme-switch { display: inline-block; height: 26px; position: relative; width: 50px; }
     .theme-switch input { display:none; }
@@ -190,26 +189,10 @@
     .slider.round { border-radius: 34px; }
     .slider.round:before { border-radius: 50%; }
 
-    /* Task Details Accordion */
-    .task-details {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease-in-out;
-      background-color: var(--color-bg);
-      padding: 0 1rem;
-      font-size: 0.9rem;
-      color: var(--color-text-muted);
-    }
-    .task-details.show {
-        max-height: 200px; /* Adjust as needed */
-        padding: 0.5rem 1rem 1rem;
-    }
-    .details-toggle-btn {
-        transition: transform 0.3s ease;
-    }
-    .details-toggle-btn.open {
-        transform: rotate(90deg);
-    }
+    .task-details { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; background-color: var(--color-bg); padding: 0 1rem; font-size: 0.9rem; color: var(--color-text-muted); }
+    .task-details.show { max-height: 200px; padding: 0.5rem 1rem 1rem; }
+    .details-toggle-btn { transition: transform 0.3s ease; }
+    .details-toggle-btn.open { transform: rotate(90deg); }
   </style>
 </head>
 <body class="p-4 sm:p-6 md:p-8">
@@ -253,7 +236,7 @@
             <h2 class="text-2xl font-bold" style="color: var(--color-text-heading);">每日任務清單</h2>
             <div id="date-display" class="font-semibold" style="color: var(--color-text);"></div>
         </div>
-        <div id="date-buttons" class="flex flex-wrap gap-3 mb-6"></div>
+        <div id="date-navigation" class="space-y-3 mb-6"></div>
         
         <div class="space-y-3 mb-4">
             <div class="flex items-center gap-3">
@@ -306,13 +289,51 @@
   <!-- Modals -->
   <div id="ai-planner-modal" class="modal-overlay hidden">
     <div class="modal-content">
-      <h3 class="text-xl font-bold mb-4">✨ AI 全域規劃</h3>
-      <p class="mb-4">輸入您的總體目標，AI 會將其拆解，並自動分配到 <strong id="ai-planner-range" class="text-blue-600"></strong> 的日期範圍内。</p>
-      <textarea id="ai-goal-input" class="form-input w-full h-24" placeholder="例如：規劃一趟為期 5 天的日本關西之旅"></textarea>
-      <div class="mt-4 flex justify-end gap-3">
-        <button onclick="hideModal('ai-planner-modal')" class="btn btn-secondary">取消</button>
-        <button id="ai-generate-btn" onclick="generateGlobalPlan()" class="btn btn-primary">生成計畫</button>
-      </div>
+        <h3 class="text-2xl font-bold mb-6 text-center" style="color: var(--color-text-heading)">進階 AI 規劃</h3>
+        <div class="space-y-4">
+            <div>
+                <label for="ai-goal-input" class="block mb-2 font-semibold">您的主要目標 (必填)</label>
+                <textarea id="ai-goal-input" class="form-input w-full h-24" placeholder="例如：學習 Python 網頁開發，並完成一個作品集網站"></textarea>
+                <p class="text-sm mt-1" style="color: var(--color-text-muted);">時間範圍: <strong id="ai-planner-range" class="text-blue-500"></strong></p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="ai-goal-type" class="block mb-2 font-semibold">目標類型</label>
+                    <select id="ai-goal-type" class="form-select">
+                        <option value="無">無特定</option>
+                        <option value="工作專案">工作專案</option>
+                        <option value="考試準備">考試準備</option>
+                        <option value="技能學習">技能學習</option>
+                        <option value="個人目標">個人目標</option>
+                        <option value="旅遊規劃">旅遊規劃</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="ai-intensity" class="block mb-2 font-semibold">安排強度</label>
+                    <select id="ai-intensity" class="form-select">
+                        <option value="無">無特定</option>
+                        <option value="輕鬆">輕鬆 (每日1-2小時)</option>
+                        <option value="中等">中等 (每日3-5小時)</option>
+                        <option value="高強度">高強度 (每日6小時以上)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label for="ai-timeslot" class="block mb-2 font-semibold">時段偏好</label>
+                <select id="ai-timeslot" class="form-select">
+                    <option value="任意">任意</option>
+                    <option value="上午">上午 (09:00-12:00)</option>
+                    <option value="下午">下午 (13:00-17:00)</option>
+                    <option value="晚上">晚上 (19:00-22:00)</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button onclick="hideModal('ai-planner-modal')" class="btn btn-secondary">取消</button>
+            <button id="ai-generate-btn" onclick="generateGlobalPlan()" class="btn btn-primary">生成計畫</button>
+        </div>
     </div>
   </div>
 
@@ -339,7 +360,7 @@
             </div>
             <div>
                 <label for="edit-task-category" class="block mb-2 font-semibold">分類</label>
-                <select id="edit-task-category" class="form-input w-full"></select>
+                <select id="edit-task-category" class="form-select w-full"></select>
             </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
@@ -372,10 +393,22 @@
 
   <script>
     let tasks = [];
+    // Date navigation state
     let selectedDate = '';
+    let selectedYear = null;
+    let selectedMonth = null;
+    
     let selectedAddTaskCategory = 'default';
     let selectedAddTaskTime = '';
     let selectedAddTaskDuration = '60';
+
+    // AI planner state cache
+    const aiPlannerState = {
+        goal: '',
+        goalType: '無',
+        intensity: '無',
+        timeSlot: '任意'
+    };
 
     const HOUR_HEIGHT = 60; 
     
@@ -388,59 +421,34 @@
         default:  { name: '預設', color: '#9ca3af' }
     };
 
-    // DOMContentLoaded: Main initialization function
-    document.addEventListener('DOMContentLoaded', () => {
-      tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-      const today = new Date().toISOString().split('T')[0];
-      
-      document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
-      document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
-      
-      setupPopovers();
-      setupEventListeners();
-      setupTheme();
-      renderTimelineGrid();
-      handleDateChange();
-      setupCurrentTimeIndicator();
-    });
+    // --- Core Functions: Setup, Event Listeners, State Management ---
     
     function setupEventListeners() {
         document.getElementById('date-start').addEventListener('change', handleDateChange);
         document.getElementById('date-end').addEventListener('change', handleDateChange);
         document.getElementById('theme-checkbox').addEventListener('change', toggleTheme);
         document.getElementById('task-input').addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') {
-                addTaskFromInput();
-            }
+            if (e.key === 'Enter') addTaskFromInput();
         });
+        
+        document.getElementById('ai-goal-input').addEventListener('input', (e) => aiPlannerState.goal = e.target.value);
+        document.getElementById('ai-goal-type').addEventListener('change', (e) => aiPlannerState.goalType = e.target.value);
+        document.getElementById('ai-intensity').addEventListener('change', (e) => aiPlannerState.intensity = e.target.value);
+        document.getElementById('ai-timeslot').addEventListener('change', (e) => aiPlannerState.timeSlot = e.target.value);
     }
 
-    // Theme setup and toggle
     function setupTheme() {
         const isDarkMode = localStorage.getItem('darkMode') === 'true';
         document.getElementById('theme-checkbox').checked = isDarkMode;
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-        }
+        if (isDarkMode) document.documentElement.classList.add('dark');
     }
 
     function toggleTheme(e) {
-        if (e.target.checked) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('darkMode', 'true');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('darkMode', 'false');
-        }
+        document.documentElement.classList.toggle('dark', e.target.checked);
+        localStorage.setItem('darkMode', e.target.checked);
     }
 
     function setupPopovers() {
-        const popoverConfigs = [
-            { btnId: 'time-selector-btn', popoverId: 'time-popover' },
-            { btnId: 'duration-selector-btn', popoverId: 'duration-popover' },
-            { btnId: 'category-selector-btn', popoverId: 'category-popover' }
-        ];
-
         const timePopover = document.getElementById('time-popover');
         timePopover.innerHTML = '';
         for (let h = 0; h < 24; h++) {
@@ -460,7 +468,7 @@
         
         const durationPopover = document.getElementById('duration-popover');
         durationPopover.innerHTML = '';
-        [30, 60, 90, 120, 180].forEach(d => {
+        [30, 60, 90, 120, 150, 180].forEach(d => {
             const item = document.createElement('div');
             item.className = 'popover-item';
             item.textContent = `${d} 分鐘`;
@@ -479,12 +487,7 @@
             const item = document.createElement('div');
             item.className = 'category-popover-item';
             item.dataset.categoryKey = key;
-            
-            item.innerHTML = `
-                <span class="color-dot" style="background-color: ${category.color};"></span>
-                <span class="category-name">${category.name}</span>
-            `;
-            
+            item.innerHTML = `<span class="color-dot" style="background-color: ${category.color};"></span><span class="category-name">${category.name}</span>`;
             item.onclick = () => {
                 selectAddTaskCategory(key);
                 togglePopover('category-popover', false);
@@ -492,18 +495,18 @@
             categoryPopover.appendChild(item);
         });
         
-        popoverConfigs.forEach(config => {
-            document.getElementById(config.btnId).addEventListener('click', e => {
+        ['time-selector-btn', 'duration-selector-btn', 'category-selector-btn'].forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            const popover = btn.querySelector('.popover');
+            btn.addEventListener('click', e => {
                 e.stopPropagation(); 
-                togglePopover(config.popoverId);
+                togglePopover(popover.id);
             });
-            document.getElementById(config.popoverId).addEventListener('click', e => {
-                e.stopPropagation();
-            });
+            popover.addEventListener('click', e => e.stopPropagation());
         });
         
         document.addEventListener('click', () => {
-            popoverConfigs.forEach(config => togglePopover(config.popoverId, false));
+            document.querySelectorAll('.popover').forEach(p => p.classList.remove('visible'));
         });
         
         selectAddTaskCategory(selectedAddTaskCategory);
@@ -512,7 +515,6 @@
     function togglePopover(popoverId, forceState) {
         const popover = document.getElementById(popoverId);
         const shouldBeVisible = typeof forceState === 'boolean' ? forceState : !popover.classList.contains('visible');
-        
         document.querySelectorAll('.popover').forEach(p => {
             if(p.id !== popoverId) p.classList.remove('visible');
         });
@@ -521,136 +523,170 @@
     
     function selectAddTaskCategory(categoryKey) {
         selectedAddTaskCategory = categoryKey;
-        const categoryColor = CATEGORIES[categoryKey]?.color || CATEGORIES.default.color;
         const btn = document.getElementById('category-selector-btn');
+        btn.classList.toggle('active', categoryKey !== 'default');
         document.querySelectorAll('#category-popover .category-popover-item').forEach(el => {
             const isActive = el.dataset.categoryKey === categoryKey;
             el.classList.toggle('active', isActive);
-            if (isActive) {
-                el.style.setProperty('--category-border-color', categoryColor);
-            } else {
-                el.style.removeProperty('--category-border-color');
-            }
+            el.style.setProperty('--category-border-color', isActive ? (CATEGORIES[categoryKey]?.color || CATEGORIES.default.color) : 'transparent');
         });
-
-        btn.classList.toggle('active', categoryKey !== 'default');
     }
     
     function handleDateChange() {
         const start = document.getElementById('date-start').value;
         const end = document.getElementById('date-end').value;
-        if (start && end) {
+        if (start && end && start <= end) {
             localStorage.setItem('plannerDateStart', start);
             localStorage.setItem('plannerDateEnd', end);
+
+            const startDate = new Date(start);
+            if(!selectedYear) selectedYear = startDate.getFullYear();
+            if(!selectedMonth) selectedMonth = startDate.getMonth();
+            
             if (!selectedDate || new Date(selectedDate) < new Date(start) || new Date(selectedDate) > new Date(end)) {
                 selectedDate = start;
+                selectedYear = startDate.getFullYear();
+                selectedMonth = startDate.getMonth();
             }
-            renderDateButtons(start, end);
+            renderDateNavigation();
             renderTasks();
             updateCurrentTimeIndicator();
         }
     }
-    
+
     function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
     
-    function renderDateButtons(start, end) {
-      const container = document.getElementById('date-buttons');
-      container.innerHTML = '';
-      const dates = getDatesBetween(start, end);
-      dates.forEach(date => {
-        const btn = document.createElement('button');
-        btn.textContent = date.substring(5);
-        btn.className = `btn btn-secondary date-btn ${date === selectedDate ? 'active' : ''}`;
-        btn.onclick = () => {
-          selectedDate = date;
-          renderDateButtons(start, end); 
-          renderTasks();
-          updateCurrentTimeIndicator();
-        };
-        container.appendChild(btn);
-      });
+    // --- Rendering Functions: Dates, Tasks, Timeline ---
+
+    function renderDateNavigation() {
+        const container = document.getElementById('date-navigation');
+        container.innerHTML = '';
+        const start = new Date(document.getElementById('date-start').value);
+        const end = new Date(document.getElementById('date-end').value);
+        const duration = (end - start) / (1000 * 60 * 60 * 24);
+
+        const showYearSelector = duration > 90 && start.getFullYear() !== end.getFullYear();
+        const showMonthSelector = duration > 20 && (start.getFullYear() !== end.getFullYear() || start.getMonth() !== end.getMonth());
+        
+        if (showYearSelector) {
+            const years = [...new Set(getDatesBetween(start, end).map(d => new Date(d).getFullYear()))];
+            container.appendChild(createButtonGroup(years, 'year', selectedYear, (year) => {
+                selectedYear = parseInt(year);
+                const firstDayOfYear = getDatesBetween(start, end).find(d => new Date(d).getFullYear() === selectedYear);
+                selectedMonth = new Date(firstDayOfYear).getMonth();
+                const firstDayOfMonth = getDatesBetween(start,end).find(d => new Date(d).getFullYear() === selectedYear && new Date(d).getMonth() === selectedMonth);
+                selectedDate = firstDayOfMonth;
+                renderDateNavigation();
+                renderTasks();
+            }));
+        }
+
+        if (showMonthSelector) {
+            const months = [...new Set(getDatesBetween(start, end)
+                .filter(d => new Date(d).getFullYear() === selectedYear)
+                .map(d => new Date(d).getMonth())
+            )];
+            container.appendChild(createButtonGroup(months, 'month', selectedMonth, (month) => {
+                selectedMonth = parseInt(month);
+                const firstDayOfMonth = getDatesBetween(start,end).find(d => new Date(d).getFullYear() === selectedYear && new Date(d).getMonth() === selectedMonth);
+                selectedDate = firstDayOfMonth;
+                renderDateNavigation();
+                renderTasks();
+            }));
+        }
+
+        const days = getDatesBetween(start, end).filter(d => {
+            const date = new Date(d);
+            return date.getFullYear() === selectedYear && date.getMonth() === selectedMonth;
+        });
+        container.appendChild(createButtonGroup(days, 'day', selectedDate, (day) => {
+            selectedDate = day;
+            renderDateNavigation();
+            renderTasks();
+            updateCurrentTimeIndicator();
+        }));
     }
 
-    function getDatesBetween(start, end) {
-      const dates = [];
-      let current = new Date(new Date(start).setUTCHours(0,0,0,0));
-      const stop = new Date(new Date(end).setUTCHours(0,0,0,0));
-      while (current <= stop) {
-        dates.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
-      }
-      return dates;
+    function createButtonGroup(items, type, activeItem, onClick) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-wrap gap-2';
+        items.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-secondary date-nav-btn px-4 py-2 text-sm';
+            
+            let value, text;
+            if (type === 'year') {
+                value = item;
+                text = `${item}年`;
+            } else if (type === 'month') {
+                value = item;
+                text = `${item + 1}月`;
+            } else { 
+                value = item;
+                text = new Date(item).getDate();
+            }
+
+            btn.dataset.value = value;
+            btn.textContent = text;
+            if (value == activeItem) {
+                btn.classList.add('active');
+            }
+            btn.addEventListener('click', (e) => onClick(e.target.dataset.value));
+            wrapper.appendChild(btn);
+        });
+        return wrapper;
     }
 
     function renderTasks() {
-      document.getElementById('date-display').textContent = selectedDate;
-      const list = document.getElementById('task-list');
-      list.innerHTML = '';
-      const filteredTasks = tasks
-        .map((task, index) => ({ ...task, originalIndex: index })) 
-        .filter(task => task.date === selectedDate)
-        .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+        document.getElementById('date-display').textContent = selectedDate;
+        const list = document.getElementById('task-list');
+        list.innerHTML = '';
+        const filteredTasks = tasks
+            .map((task, index) => ({ ...task, originalIndex: index })) 
+            .filter(task => task.date === selectedDate)
+            .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 
-      if (filteredTasks.length === 0) {
-          list.innerHTML = `<div class="text-center py-6" style="color: var(--color-text-muted);">這天沒有任務</div>`;
-      } else {
-        filteredTasks.forEach(task => {
-            const li = document.createElement('li');
-            li.id = `task-item-${task.originalIndex}`;
-            li.className = 'task-item';
-            if (task.done) li.classList.add('done');
-            
-            const timeRange = getTaskTimeRange(task.time, task.duration);
+        if (filteredTasks.length === 0) {
+            list.innerHTML = `<div class="text-center py-6" style="color: var(--color-text-muted);">這天沒有任務</div>`;
+        } else {
+            filteredTasks.forEach(task => {
+                const li = document.createElement('li');
+                li.id = `task-item-${task.originalIndex}`;
+                li.className = 'task-item';
+                if (task.done) li.classList.add('done');
+                
+                const timeRange = getTaskTimeRange(task.time, task.duration);
+                const hasDetails = task.details && task.details.trim() !== '';
 
-            li.innerHTML = `
-                <div class="task-main-info flex items-center p-3">
-                    <button title="顯示/隱藏說明" class="details-toggle-btn text-gray-400 hover:text-blue-500 mr-2 ${task.details ? '' : 'invisible'}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                    <div class="category-dot" style="background-color: ${CATEGORIES[task.category]?.color || CATEGORIES.default.color};"></div>
-                    <input type="checkbox" ${task.done ? 'checked' : ''} class="w-5 h-5 rounded-sm mr-2 border-gray-300 text-blue-500 focus:ring-blue-500 flex-shrink-0" onchange="toggleTask(${task.originalIndex})">
-                    <div class="flex-grow">
-                        <span class="task-name font-medium">${task.name}</span>
-                        ${timeRange ? `<div class="text-sm" style="color: var(--color-text-muted);">${timeRange}</div>` : ''}
+                li.innerHTML = `
+                    <div class="task-main-info flex items-center p-3">
+                        <button title="顯示/隱藏說明" class="details-toggle-btn text-gray-400 hover:text-blue-500 mr-2 ${hasDetails ? '' : 'invisible'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                        <div class="category-dot" style="background-color: ${CATEGORIES[task.category]?.color || CATEGORIES.default.color};"></div>
+                        <input type="checkbox" ${task.done ? 'checked' : ''} class="w-5 h-5 rounded-sm mr-2 border-gray-300 text-blue-500 focus:ring-blue-500 flex-shrink-0" onchange="toggleTask(${task.originalIndex})">
+                        <div class="flex-grow">
+                            <span class="task-name font-medium">${task.name}</span>
+                            ${timeRange ? `<div class="text-sm" style="color: var(--color-text-muted);">${timeRange}</div>` : ''}
+                        </div>
+                        <button title="編輯任務" class="ml-4 text-gray-400 hover:text-blue-500" onclick="showEditModal(${task.originalIndex})">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                        </button>
+                        <button title="刪除任務" class="ml-2 text-gray-400 hover:text-red-500" onclick="confirmDeleteTask(${task.originalIndex})">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                        </button>
                     </div>
-                    <button title="編輯任務" class="ml-4 text-gray-400 hover:text-blue-500" onclick="showEditModal(${task.originalIndex})">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
-                    </button>
-                    <button title="刪除任務" class="ml-2 text-gray-400 hover:text-red-500" onclick="confirmDeleteTask(${task.originalIndex})">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                    </button>
-                </div>
-                ${task.details ? `<div class="task-details ml-8">${task.details.replace(/\n/g, '<br>')}</div>` : ''}
-            `;
-            list.appendChild(li);
-        });
-        // Add event listeners for the new details toggles
-        document.querySelectorAll('.details-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', toggleDetails);
-        });
-      }
-      renderTimeline(filteredTasks);
+                    <div class="task-details ml-8">${hasDetails ? task.details.replace(/\n/g, '<br>') : ''}</div>
+                `;
+                list.appendChild(li);
+            });
+            document.querySelectorAll('.details-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', toggleDetails);
+            });
+        }
+        renderTimeline(filteredTasks);
     }
     
-    function getTaskTimeRange(time, duration) {
-        if (!time || !duration) return null;
-        const [startHour, startMinute] = time.split(':').map(Number);
-        const endMoment = new Date();
-        endMoment.setHours(startHour, startMinute + parseInt(duration), 0);
-        const endTime = `${String(endMoment.getHours()).padStart(2,'0')}:${String(endMoment.getMinutes()).padStart(2,'0')}`;
-        return `${time} - ${endTime}`;
-    }
-
-    function toggleDetails(event) {
-        const btn = event.currentTarget;
-        const taskItem = btn.closest('.task-item');
-        const details = taskItem.querySelector('.task-details');
-        if (details) {
-            btn.classList.toggle('open');
-            details.classList.toggle('show');
-        }
-    }
-
     function renderTimelineGrid() {
         const grid = document.getElementById('timeline-grid');
         grid.innerHTML = '';
@@ -712,6 +748,38 @@
         });
     }
 
+    // --- Helper & Utility Functions ---
+
+    function getDatesBetween(start, end) {
+      const dates = [];
+      let current = new Date(new Date(start).setUTCHours(0,0,0,0));
+      const stop = new Date(new Date(end).setUTCHours(0,0,0,0));
+      while (current <= stop) {
+        dates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function getTaskTimeRange(time, duration) {
+        if (!time || !duration) return null;
+        const [startHour, startMinute] = time.split(':').map(Number);
+        const endMoment = new Date();
+        endMoment.setHours(startHour, startMinute + parseInt(duration), 0);
+        const endTime = `${String(endMoment.getHours()).padStart(2,'0')}:${String(endMoment.getMinutes()).padStart(2,'0')}`;
+        return `${time} - ${endTime}`;
+    }
+
+    function toggleDetails(event) {
+        const btn = event.currentTarget;
+        const taskItem = btn.closest('.task-item');
+        const details = taskItem.querySelector('.task-details');
+        if (details) {
+            btn.classList.toggle('open');
+            details.classList.toggle('show');
+        }
+    }
+
     function highlightTaskInList(index) {
         document.querySelectorAll('.task-item').forEach(el => el.classList.remove('highlight'));
         const targetElement = document.getElementById(`task-item-${index}`);
@@ -729,6 +797,27 @@
         return `${+r},${+g},${+b}`;
     }
 
+    function setupCurrentTimeIndicator() {
+        updateCurrentTimeIndicator();
+        setInterval(updateCurrentTimeIndicator, 60000); 
+    }
+
+    function updateCurrentTimeIndicator() {
+        const indicator = document.getElementById('timeline-current-time');
+        const today = new Date().toISOString().split('T')[0];
+        if (selectedDate === today) {
+            indicator.classList.remove('hidden');
+            const now = new Date();
+            const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+            const topPosition = (minutesSinceMidnight / 60) * HOUR_HEIGHT;
+            indicator.style.top = `${topPosition}px`;
+        } else {
+            indicator.classList.add('hidden');
+        }
+    }
+
+    // --- Task CRUD & IO Functions ---
+    
     function addTaskFromInput(){
       const input = document.getElementById('task-input');
       const name = input.value.trim();
@@ -786,41 +875,6 @@
       showToast('所有任務已清除', 'success');
     }
 
-    // Modal and Toast logic
-    function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-    function showConfirmation(title, body, onConfirm) {
-        document.getElementById('confirm-modal-title').textContent = title;
-        document.getElementById('confirm-modal-body').textContent = body;
-        
-        const confirmBtn = document.getElementById('confirm-modal-confirm');
-        const cancelBtn = document.getElementById('confirm-modal-cancel');
-
-        const newConfirmBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-
-        newConfirmBtn.addEventListener('click', () => {
-            onConfirm();
-            hideModal('confirm-modal');
-        });
-
-        cancelBtn.onclick = () => hideModal('confirm-modal');
-        showModal('confirm-modal');
-    }
-    
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.remove();
-        }, 5000);
-    }
-
-    // Edit Task Functions
     function showEditModal(index) {
         const task = tasks[index];
         if (!task) return;
@@ -862,7 +916,6 @@
         showToast('任務更新成功！', 'success');
     }
 
-    // IO Functions
     function importTasks(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -874,7 +927,6 @@
             tasks = importedTasks;
             saveTasks();
 
-            // FIX: Automatically adjust date range after import
             if (tasks.length > 0) {
               const dates = tasks.map(t => new Date(t.date));
               const minDate = new Date(Math.min(...dates));
@@ -887,7 +939,7 @@
             }
             
             showToast('成功匯入任務！', 'success');
-            handleDateChange(); // Re-render with new date range
+            handleDateChange();
           } else { 
             throw new Error('檔案格式不符'); 
           }
@@ -908,30 +960,44 @@
       a.click();
       URL.revokeObjectURL(url);
     }
+    
+    // --- Modal and UI Functions ---
+    
+    function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-    // Timeline and time indicator
-    function setupCurrentTimeIndicator() {
-        updateCurrentTimeIndicator();
-        setInterval(updateCurrentTimeIndicator, 60000); 
-    }
+    function showConfirmation(title, body, onConfirm) {
+        document.getElementById('confirm-modal-title').textContent = title;
+        document.getElementById('confirm-modal-body').textContent = body;
+        
+        const confirmBtn = document.getElementById('confirm-modal-confirm');
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
-    function updateCurrentTimeIndicator() {
-        const indicator = document.getElementById('timeline-current-time');
-        const today = new Date().toISOString().split('T')[0];
-        if (selectedDate === today) {
-            indicator.classList.remove('hidden');
-            const now = new Date();
-            const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-            const topPosition = (minutesSinceMidnight / 60) * HOUR_HEIGHT;
-            indicator.style.top = `${topPosition}px`;
-        } else {
-            indicator.classList.add('hidden');
-        }
+        newConfirmBtn.addEventListener('click', () => {
+            onConfirm();
+            hideModal('confirm-modal');
+        });
+
+        document.getElementById('confirm-modal-cancel').onclick = () => hideModal('confirm-modal');
+        showModal('confirm-modal');
     }
     
-    // Gemini AI Functions
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+    
+    // --- Gemini AI Functions ---
     const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
     const API_KEY = "AIzaSyCGmO68BJGHhrWDRKe8Y9c2lqJfwZCnVgY"; // 您的 API 金鑰
+
     function showAIPlannerModal() {
       const start = document.getElementById('date-start').value;
       const end = document.getElementById('date-end').value;
@@ -940,12 +1006,17 @@
           return;
       }
       document.getElementById('ai-planner-range').textContent = `${start} 到 ${end}`;
+      
+      document.getElementById('ai-goal-input').value = aiPlannerState.goal;
+      document.getElementById('ai-goal-type').value = aiPlannerState.goalType;
+      document.getElementById('ai-intensity').value = aiPlannerState.intensity;
+      document.getElementById('ai-timeslot').value = aiPlannerState.timeSlot;
+
       showModal('ai-planner-modal');
     }
 
     async function generateGlobalPlan() {
-        const goal = document.getElementById('ai-goal-input').value.trim();
-        if (!goal) { showToast('請輸入您的目標！', 'error'); return; }
+        if (!aiPlannerState.goal) { showToast('請輸入您的主要目標！', 'error'); return; }
         
         const startDate = document.getElementById('date-start').value;
         const endDate = document.getElementById('date-end').value;
@@ -954,32 +1025,53 @@
         const today = now.toISOString().split('T')[0];
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-        let prompt = `作為一個頂尖的專案規劃助理，請深入分析以下總體目標，並將其拆解成一系列具體、可執行的子任務。對於每一個子任務，你必須提供以下資訊：1. 'taskName': 具體的任務名稱。2. 'category': 根據任務性質，從 'work', 'study', 'personal', 'sport', 'chores' 中選擇一個最適合的分類。3. 'duration': 評估此子任務的複雜度和常規耗時，給出一個合理的持續時間（單位為分鐘，例如 30, 60, 90, 120）。4. 'date': 將此任務安排在 ${startDate} 到 ${endDate} 的日期範圍內的一個合適日期 (YYYY-MM-DD格式)。5. 'time': 在安排的日期中，給出一個建議的開始時間 (HH:MM格式)。6. 'details': 根據任務內容，生成1-2句的簡要說明。`;
-        
-        if (startDate === today) {
-            prompt += `\n\n重要限制：今天是 ${today}，現在的時間是 ${currentTime}。因此，今天所有任務的開始時間都必須晚于 ${currentTime}。`;
+        let prompt = `你是一位經驗豐富的AI專案規劃助理，擅長根據使用者的總體目標，安排出合理、密集、具可行性的每日行程。
+          請依據以下資訊進行任務規劃：
+          1️⃣ 使用者目標：「${userGoal}」  
+          2️⃣ 時間範圍：${startDate} 至 ${endDate}  
+          3️⃣ 目標類型：「${goalType}」（例如：工作專案 / 考試準備 / 技能學習 / 個人目標等）  
+          4️⃣ 安排強度：「${intensityLevel}」（輕鬆：每日1~2小時；中等：每日3~5小時；高強度：每日6小時以上）  
+          5️⃣ 時段偏好：${preferredTimeSlot}（例如：上午 / 下午 / 晚上 / 任意）  
+          ---
+          請將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至每一天，避免過度鬆散（例如只安排1~2天）**。
+          ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
+          - 'taskName'：具體明確的子任務名稱  
+          - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇  
+          - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120）  
+          - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍內）  
+          - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）  
+          - 'details'：1～2 句的簡要說明，清楚任務內容與重點  
+          ⚠️ 請確保：
+          - 每天安排的總任務時間符合指定強度
+          - 任務時間不重疊
+          - 每個子任務都合理可執行，不過度瑣碎，也不過度籠統
+          - 若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先聽課，再練習）
+          ]`
+        if (aiPlannerState.goalType !== '無') prompt += `\n這個計畫的目標類型是「${aiPlannerState.goalType}」。請根據此類型調整任務的性質和語氣。`;
+        if (aiPlannerState.intensity !== '無') {
+            let intensityDesc = {'輕鬆': '每日總時長約1-2小時', '中等': '每日總時長約3-5小時', '高強度': '每日總時長約6小時以上'}[aiPlannerState.intensity];
+            prompt += `\n計畫的安排強度為「${aiPlannerState.intensity}」，這意味著任務安排應遵循：${intensityDesc}。`;
         }
+        if (aiPlannerState.timeSlot !== '任意') {
+            let timeSlotDesc = {'上午': '主要在 09:00 到 12:00 之間', '下午': '主要在 13:00 到 17:00 之間', '晚上': '主要在 19:00 到 22:00 之間'}[aiPlannerState.timeSlot];
+            prompt += `\n使用者的時段偏好為「${aiPlannerState.timeSlot}」，請盡可能將任務安排在${timeSlotDesc}。`;
+        }
+        if (startDate === today) prompt += `\n\n重要限制：今天是 ${today}，現在的時間是 ${currentTime}。因此，今天所有任務的開始時間都必須晚于 ${currentTime}。`;
         
-        prompt += `\n\n總體目標是：「${goal}」 你的回覆必須是嚴格的 JSON 陣列格式，不包含任何額外的說明或 markdown 語法。`;
+        prompt += `\n\n總體目標是：「${aiPlannerState.goal}」 你的回覆必須是嚴格的 JSON 陣列格式，不包含任何額外的說明或 markdown 語法。`;
 
         showModal('loading-modal');
         hideModal('ai-planner-modal');
         try {
             const generatedPlan = await callGeminiForPlan(prompt, startDate, endDate);
             generatedPlan.forEach(task => {
-                if (task.date === today && task.time < currentTime) {
-                    console.warn(`AI 仍規劃了過時的任務: ${task.name} at ${task.time}。將自動忽略。`);
-                    return;
-                }
-                
+                if (task.date === today && task.time < currentTime) return; // Skip past tasks
                 if (new Date(task.date) >= new Date(startDate) && new Date(task.date) <= new Date(endDate)) {
                    createTask(task.taskName, task.time, task.date, task.duration, task.category, task.details);
                 } else {
-                    console.warn(`AI suggested a task outside the date range: ${task.date}. Placing it on the start date.`);
-                    createTask(task.taskName, task.time, startDate, task.duration, task.category, task.details);
+                   createTask(task.taskName, task.time, startDate, task.duration, task.category, task.details);
                 }
             });
-            document.getElementById('ai-goal-input').value = '';
             renderTasks(); 
             showToast('AI 計畫已成功生成！', 'success');
         } catch (error) {
@@ -991,7 +1083,7 @@
     }
 
     async function callGeminiForPlan(prompt, startDate, endDate) {
-        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { taskName: { type: "STRING", description: "具體的任務名稱" }, date: { type: "STRING", description: `任務的日期 (YYYY-MM-DD)，必須介於 ${startDate} 和 ${endDate} 之間` }, time: { type: "STRING", description: "建議的任務時間 (HH:MM)" }, duration: {type: "STRING", description: "任務的預估持續時間(分鐘)"}, category: { type: "STRING", description: "任務分類(work, study, personal, sport, chores)" }, details: {type: "STRING", description: "任務的簡要說明"} }, required: ["taskName", "date", "time", "duration", "category", "details"] } } } };
+        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { taskName: { type: "STRING" }, date: { type: "STRING" }, time: { type: "STRING" }, duration: {type: "STRING"}, category: { type: "STRING" }, details: {type: "STRING"} }, required: ["taskName", "date", "time", "duration", "category", "details"] } } } };
         const result = await fetchGemini(payload);
         return JSON.parse(result);
     }
@@ -1001,9 +1093,7 @@
         if (!response.ok) {
             const errorBody = await response.text();
             console.error("API Error Response:", errorBody);
-            if (response.status === 401) {
-                throw new Error('API 認證失敗 (401)。請確認 API 金鑰是否已正確設定。');
-            }
+            if (response.status === 401) throw new Error('API 認證失敗 (401)。請確認 API 金鑰是否已正確設定。');
             throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
         }
         const result = await response.json();
@@ -1011,12 +1101,27 @@
             return result.candidates[0].content.parts[0].text;
         } else {
             console.warn("Unexpected API response structure:", result);
-            if (result.candidates && result.candidates[0].finishReason !== 'STOP') {
-                throw new Error(`API call finished with reason: ${result.candidates[0].finishReason}`);
-            }
+            if (result.candidates && result.candidates[0].finishReason !== 'STOP') throw new Error(`API call finished with reason: ${result.candidates[0].finishReason}`);
             throw new Error("Invalid response structure from Gemini API.");
         }
     }
+    
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+      tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
+      document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
+      
+      setupPopovers();
+      setupEventListeners();
+      setupTheme();
+      renderTimelineGrid();
+      handleDateChange();
+      setupCurrentTimeIndicator();
+    });
+
   </script>
 </body>
 </html>
