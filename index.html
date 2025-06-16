@@ -1030,27 +1030,23 @@
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
         let prompt = `你是一位經驗豐富的AI專案規劃助理，擅長根據使用者的總體目標，安排出合理、密集、具可行性的每日行程。
-          請依據以下資訊進行任務規劃：
-          1️⃣ 使用者目標：「${aiPlannerState.goal}」  
-          2️⃣ 時間範圍：${startDate} 至 ${endDate}  
-          3️⃣ 目標類型：「${aiPlannerState.goalType}」
-          4️⃣ 安排強度：「${aiPlannerState.intensity}」
-          5️⃣ 時段偏好：「${aiPlannerState.timeSlot}」
+          請依據以下資訊進行任務規劃：使用者目標：${aiPlannerState.goal}、時間範圍：${startDate} 至 ${endDate}、目標類型：${aiPlannerState.goalType}、安排強度：「${aiPlannerState.intensity}」、時段偏好：「${aiPlannerState.timeSlot}」
           ---
-          請將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至每一天，避免過度鬆散（例如只安排1~2天）**。
+          請理解總體目標，將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至時間範圍：${startDate} 至 ${endDate}當中每天**。可為每日安排多個任務細項，避免使任務過於籠統。
           ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
           - 'taskName'：具體明確的子任務名稱  
           - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇  
           - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）  
           - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）  
           - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）  
-          - 'details'：1～2 句的簡要說明，清楚任務內容與重點  
-          ⚠️ 請確保：
+          - 'details'：數句簡要說明，清楚任務內容與重點  
+          請確保：
+          - 相鄰任務之間預設空閒緩衝時段
           - 每天安排的總任務時間符合指定強度
           - 任務時間不重疊
-          - 每個子任務都合理可執行，不過度瑣碎，也不過度籠統
+          - 每個子任務都合理可執行，不過度瑣碎，也適當兼顧細節
           - 若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先聽課，再練習）
-          `; // (The rest of the prompt is the same)
+          `
         
         showModal('loading-modal');
         hideModal('ai-planner-modal');
