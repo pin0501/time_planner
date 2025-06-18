@@ -10,8 +10,8 @@ const aiPlannerState = {
     goal: '',
     goalType: '無',
     intensity: '無',
-    // 預設選中早上8點到晚上10點 (22點)
-    timeSlotHours: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22] 
+    // 預設選中更合理的上下午時段
+    timeSlotHours: [8, 9, 10, 11, 14, 15, 16, 17]
 };
 
 const HOUR_HEIGHT = 60; 
@@ -586,34 +586,73 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 5000);
 }
 
-// --- 智慧時段選擇器邏輯 ---
+// --- 智慧時段選擇器邏輯 (拖曳選取版) ---
 const PRESET_HOURS = {
-    morning: [8, 9, 10, 11],
-    afternoon: [13, 14, 15, 16, 17],
-    evening: [19, 20, 21, 22]
+    morning:   [8, 9, 10, 11],
+    afternoon: [14, 15, 16, 17],
+    evening:   [20, 21, 22, 23]
 };
 
+let isDragging = false;
+let dragSelectionMode = null; 
+
 function setupSmartTimeSlots() {
-    const bar = document.querySelector('#smart-timeslot-bar .grid');
-    bar.innerHTML = '';
-    for (let i = 0; i < 24; i++) {
-        const hourBlock = document.createElement('div');
-        hourBlock.className = 'timeslot-hour';
-        hourBlock.dataset.hour = i;
-        bar.appendChild(hourBlock);
-        hourBlock.addEventListener('click', () => handleHourClick(i));
+    const gridContainer = document.getElementById('timeslot-grid');
+    gridContainer.innerHTML = '';
+
+    for (let i = 0; i < 12; i++) {
+        const startHour = i * 2;
+        const block = document.createElement('div');
+        block.className = 'timeslot-block';
+        block.dataset.starthour = startHour;
+        block.setAttribute('title', `${startHour}:00 - ${startHour + 2}:00`);
+        
+        block.addEventListener('mousedown', (e) => handleMouseDown(e, startHour));
+        block.addEventListener('mouseover', (e) => handleMouseOver(e, startHour));
+        block.addEventListener('mouseenter', (e) => e.currentTarget.classList.add('hover-preview'));
+        block.addEventListener('mouseleave', (e) => e.currentTarget.classList.remove('hover-preview'));
+        gridContainer.appendChild(block);
     }
+    
+    gridContainer.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseup', handleMouseUp);
+    gridContainer.addEventListener('mouseleave', () => { if (isDragging) handleMouseUp(); });
+
     document.querySelectorAll('#ai-timeslot-presets .timeslot-btn').forEach(btn => {
         btn.addEventListener('click', () => handlePresetClick(btn.dataset.preset));
     });
     updateSmartTimeSlotUI();
 }
 
-function handleHourClick(hour) {
-    const index = aiPlannerState.timeSlotHours.indexOf(hour);
-    if (index > -1) aiPlannerState.timeSlotHours.splice(index, 1);
-    else aiPlannerState.timeSlotHours.push(hour);
-    updateSmartTimeSlotUI();
+function handleMouseDown(event, startHour) {
+    event.preventDefault();
+    isDragging = true;
+    const block = event.currentTarget;
+    dragSelectionMode = block.classList.contains('active') ? 'deselect' : 'select';
+    applyDragSelection(startHour);
+}
+
+function handleMouseOver(event, startHour) {
+    if (!isDragging) return;
+    applyDragSelection(startHour);
+}
+
+function handleMouseUp() {
+    if (!isDragging) return;
+    isDragging = false;
+    dragSelectionMode = null;
+    updatePresetButtonUI();
+}
+
+function applyDragSelection(startHour) {
+    const hoursToChange = [startHour, startHour + 1];
+    if (dragSelectionMode === 'select') {
+        aiPlannerState.timeSlotHours = [...new Set([...aiPlannerState.timeSlotHours, ...hoursToChange])];
+    } else if (dragSelectionMode === 'deselect') {
+        aiPlannerState.timeSlotHours = aiPlannerState.timeSlotHours.filter(h => !hoursToChange.includes(h));
+    }
+    const block = document.querySelector(`#timeslot-grid [data-starthour="${startHour}"]`);
+    if (block) block.classList.toggle('active', dragSelectionMode === 'select');
 }
 
 function handlePresetClick(preset) {
@@ -633,11 +672,23 @@ function handlePresetClick(preset) {
 
 function updateSmartTimeSlotUI() {
     aiPlannerState.timeSlotHours.sort((a,b) => a - b);
-    for (let i = 0; i < 24; i++) {
-        const hourBlock = document.querySelector(`#smart-timeslot-bar [data-hour="${i}"]`);
-        if (hourBlock) hourBlock.classList.toggle('active', aiPlannerState.timeSlotHours.includes(i));
+    updateTimeslotBlocksUI();
+    updatePresetButtonUI();
+}
+
+function updateTimeslotBlocksUI() {
+    for (let i = 0; i < 12; i++) {
+        const startHour = i * 2;
+        const block = document.querySelector(`#timeslot-grid [data-starthour="${startHour}"]`);
+        if (block) {
+            const isActive = aiPlannerState.timeSlotHours.includes(startHour) && aiPlannerState.timeSlotHours.includes(startHour + 1);
+            block.classList.toggle('active', isActive);
+        }
     }
-    Object.keys(PRESET_HOURS).forEach(preset => {
+}
+
+function updatePresetButtonUI() {
+     Object.keys(PRESET_HOURS).forEach(preset => {
         const btn = document.querySelector(`#ai-timeslot-presets [data-preset="${preset}"]`);
         if (btn) {
             const isAlreadyAdded = PRESET_HOURS[preset].every(h => aiPlannerState.timeSlotHours.includes(h));
@@ -649,14 +700,12 @@ function updateSmartTimeSlotUI() {
 function convertHoursToPromptString() {
     if (aiPlannerState.timeSlotHours.length === 0) return '任意時段';
     if (aiPlannerState.timeSlotHours.length === 24) return '全天任意時段';
-
     const hours = [...aiPlannerState.timeSlotHours];
-    if (hours.length === 0) return '任意時段'; // Double check for safety
+    if (hours.length === 0) return '任意時段';
     
     const ranges = [];
     let start = hours[0];
     let end = hours[0];
-
     for (let i = 1; i < hours.length; i++) {
         if (hours[i] === end + 1) {
             end = hours[i];
@@ -679,11 +728,9 @@ function showAIPlannerModal() {
         return;
     }
     document.getElementById('ai-planner-range').textContent = `${start} 到 ${end}`;
-    
     document.getElementById('ai-goal-input').value = aiPlannerState.goal;
     document.getElementById('ai-goal-type').value = aiPlannerState.goalType;
     document.getElementById('ai-intensity').value = aiPlannerState.intensity;
-    
     updateSmartTimeSlotUI();
     showModal('ai-planner-modal');
 }
@@ -750,9 +797,7 @@ async function generateGlobalPlan() {
 async function callBackendAPI(prompt) {
     const response = await fetch('/api/generate-plan', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt }),
     });
 
