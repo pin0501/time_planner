@@ -205,7 +205,7 @@
     .details-toggle-btn { transition: transform 0.3s ease; }
     .details-toggle-btn.open { transform: rotate(90deg); }
 
-    /* 新增：智慧時段選擇器樣式 */
+    /* 智慧時段選擇器的最終樣式 */
     .timeslot-btn {
         padding: 0.5rem 1rem;
         border-radius: 6px;
@@ -219,7 +219,7 @@
     }
     .timeslot-btn:hover:not(.active) {
         border-color: var(--color-text-muted);
-        background-color: var(--color-btn-secondary-bg);
+        background-color: var(--color-btn-secondary-hover);
     }
     .timeslot-btn.active {
         background-color: var(--color-work);
@@ -235,22 +235,31 @@
     .timeslot-btn[data-preset="clear"]:hover {
         background-color: var(--color-btn-secondary-hover);
     }
-    .timeslot-hour {
-        height: 32px;
+    #timeslot-grid {
+      user-select: none; /* 防止拖曳時選取到文字 */
+    }
+    .timeslot-block {
+        height: 40px;
         background-color: var(--color-btn-secondary-bg);
-        border-radius: 3px;
+        border: 2px solid transparent; /* 預留邊框空間 */
+        border-radius: 4px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: background-color 0.2s, border-color 0.2s;
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
     }
-    .timeslot-hour:hover {
-        transform: scale(1.05);
-        background-color: var(--color-btn-secondary-hover);
-        z-index: 5;
+    .timeslot-block.hover-preview {
+        border-color: var(--color-text-muted);
     }
-    .timeslot-hour.active {
-        background-color: var(--color-work);
-        transform: scale(1.05);
+    .timeslot-block.active {
+        border-color: var(--color-work);
+        background-color: rgba(37, 99, 235, 0.1);
+        color: var(--color-work);
+        font-weight: 600;
     }
   </style>
 </head>
@@ -376,22 +385,22 @@
             </div>
 
             <div>
-                <label class="block mb-2 font-semibold">時段偏好 (可點擊下方時間軸微調)</label>
-                <div id="ai-timeslot-presets" class="flex flex-wrap gap-2 mb-3">
-                    <button type="button" class="timeslot-btn" data-preset="morning">上午</button>
-                    <button type="button" class="timeslot-btn" data-preset="afternoon">下午</button>
-                    <button type="button" class="timeslot-btn" data-preset="evening">晚上</button>
+                <label class="block mb-2 font-semibold">時段偏好 (可按住滑鼠拖曳選取)</label>
+                <div id="ai-timeslot-presets" class="flex flex-wrap gap-2 mb-4">
+                    <button type="button" class="timeslot-btn" data-preset="morning">上午 (08-12)</button>
+                    <button type="button" class="timeslot-btn" data-preset="afternoon">下午 (14-18)</button>
+                    <button type="button" class="timeslot-btn" data-preset="evening">晚上 (20-24)</button>
                     <button type="button" class="timeslot-btn" data-preset="clear">清除</button>
                 </div>
-                <div id="smart-timeslot-bar" class="p-2 border rounded-lg" style="border-color: var(--color-input-border);">
-                    <div class="grid grid-cols-12 sm:grid-cols-24 gap-px">
+                <div id="smart-timeslot-selector" class="space-y-1">
+                    <div id="timeslot-grid" class="grid grid-cols-12 gap-1.5">
                         </div>
-                    <div class="flex justify-between text-xs mt-1" style="color: var(--color-text-muted);">
-                        <span>00:00</span>
-                        <span>06:00</span>
-                        <span>12:00</span>
-                        <span>18:00</span>
-                        <span>24:00</span>
+                    <div class="flex justify-between text-xs" style="color: var(--color-text-muted);">
+                        <span class="w-1/4 text-left">00</span>
+                        <span class="w-1/4 text-center">06</span>
+                        <span class="w-1/4 text-center">12</span>
+                        <span class="w-1/4 text-right">18</span>
+                        <span class="w-1/4 text-right">24</span>
                     </div>
                 </div>
             </div>
