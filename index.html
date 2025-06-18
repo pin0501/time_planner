@@ -995,30 +995,29 @@
         }, 5000);
     }
     
-    const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent`;
-    const API_KEY = "AIzaSyD5b9sPclZ9cK113As6oK6QehFMiECeEbg"; // 部署到 GitHub Pages 時，請在此填入您自己的 API 金鑰
-
+    // const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent`;
+    // const API_KEY = ""; // 部署到 GitHub Pages 時，請在此填入您自己的 API 金鑰
+    
     function showAIPlannerModal() {
-      const start = document.getElementById('date-start').value;
-      const end = document.getElementById('date-end').value;
-      if (!start || !end) {
-          showToast("請先設定有效的起始和結束日期！", "error");
-          return;
-      }
-      document.getElementById('ai-planner-range').textContent = `${start} 到 ${end}`;
-      
-      document.getElementById('ai-goal-input').value = aiPlannerState.goal;
-      document.getElementById('ai-goal-type').value = aiPlannerState.goalType;
-      document.getElementById('ai-intensity').value = aiPlannerState.intensity;
-      document.getElementById('ai-timeslot').value = aiPlannerState.timeSlot;
-
-      showModal('ai-planner-modal');
+        const start = document.getElementById('date-start').value;
+        const end = document.getElementById('date-end').value;
+        if (!start || !end) {
+            showToast("請先設定有效的起始和結束日期！", "error");
+            return;
+        }
+        document.getElementById('ai-planner-range').textContent = `${start} 到 ${end}`;
+        
+        document.getElementById('ai-goal-input').value = aiPlannerState.goal;
+        document.getElementById('ai-goal-type').value = aiPlannerState.goalType;
+        document.getElementById('ai-intensity').value = aiPlannerState.intensity;
+        document.getElementById('ai-timeslot').value = aiPlannerState.timeSlot;
+    
+        showModal('ai-planner-modal');
     }
-
+    
     async function generateGlobalPlan() {
-        if (!aiPlannerState.goal) { showToast('請輸入您的主要目標！', 'error'); return; }
-        if (!API_KEY) {
-            showToast('錯誤：API 金鑰未設定。請在程式碼中填入您的金鑰。', 'error');
+        if (!aiPlannerState.goal) {
+            showToast('請輸入您的主要目標！', 'error');
             return;
         }
         
@@ -1028,92 +1027,95 @@
         const now = new Date();
         const today = now.toISOString().split('T')[0];
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
+    
+        // 產生要發送給 AI 的完整提示語
         let prompt = `你是一位經驗豐富的AI專案規劃助理，擅長根據使用者的總體目標，安排出合理、密集、具可行性的每日行程。
-          請依據以下資訊進行任務規劃：使用者目標：${aiPlannerState.goal}、時間範圍：${startDate} 至 ${endDate}、目標類型：${aiPlannerState.goalType}、安排強度：「${aiPlannerState.intensity}」、時段偏好：「${aiPlannerState.timeSlot}」
-          ---
-          請理解總體目標，將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至時間範圍：${startDate} 至 ${endDate}當中每天**。可為每日安排多個任務細項，避免使任務過於籠統。
-          ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
-          - 'taskName'：具體明確的子任務名稱  
-          - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇  
-          - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）  
-          - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）  
-          - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）  
-          - 'details'：數句簡要說明，清楚任務內容與重點  
-          請確保：
-          - 相鄰任務之間預設空閒緩衝時段
-          - 每天安排的總任務時間符合指定強度
-          - 任務時間不重疊
-          - 每個子任務都合理可執行，不過度瑣碎，也適當兼顧細節
-          - 若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先聽課，再練習）
-          `
+            請依據以下資訊進行任務規劃：使用者目標：${aiPlannerState.goal}、時間範圍：${startDate} 至 ${endDate}、目標類型：${aiPlannerState.goalType}、安排強度：「${aiPlannerState.intensity}」、時段偏好：「${aiPlannerState.timeSlot}」
+            ---
+            請理解總體目標，將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至時間範圍：${startDate} 至 ${endDate}當中每天**。可為每日安排多個任務細項，避免使任務過於籠統。
+            ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
+            - 'taskName'：具體明確的子任務名稱
+            - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇
+            - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）
+            - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）
+            - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）
+            - 'details'：數句簡要說明，清楚任務內容與重點
+            請確保：
+            - 相鄰任務之間預設空閒緩衝時段
+            - 每天安排的總任務時間符合指定強度
+            - 任務時間不重疊
+            - 每個子任務都合理可執行，不過度瑣碎，也適當兼顧細節
+            - 若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先聽課，再練習）
+            `;
         
         showModal('loading-modal');
         hideModal('ai-planner-modal');
+    
         try {
-            const generatedPlan = await callGeminiForPlan(prompt, startDate, endDate);
+            // 呼叫我們自己的後端代理函式，而不是直接呼叫 Google
+            const generatedPlan = await callBackendAPI(prompt);
+            
             generatedPlan.forEach(task => {
-                if (task.date === today && task.time < currentTime) return; 
+                // 這段用來過濾掉過去時間的任務，以及確保任務日期在範圍內
+                if (task.date === today && task.time < currentTime) return;
                 if (new Date(task.date) >= new Date(startDate) && new Date(task.date) <= new Date(endDate)) {
-                   createTask(task.taskName, task.time, task.date, task.duration, task.category, task.details);
+                    createTask(task.taskName, task.time, task.date, task.duration, task.category, task.details);
                 } else {
-                   createTask(task.taskName, task.time, startDate, task.duration, task.category, task.details);
+                    // 如果 AI 回傳的日期超出範圍，強制設定為開始日期
+                    createTask(task.taskName, task.time, startDate, task.duration, task.category, task.details);
                 }
             });
-            renderTasks(); 
+    
+            renderTasks();
             showToast('AI 計畫已成功生成！', 'success');
         } catch (error) {
-            console.error("Gemini API Error:", error);
+            console.error("Error generating plan:", error);
+            // 顯示從後端傳來的錯誤訊息
             showToast(error.message, "error");
         } finally {
             hideModal('loading-modal');
         }
     }
-
-    async function callGeminiForPlan(prompt, startDate, endDate) {
-        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { taskName: { type: "STRING" }, date: { type: "STRING" }, time: { type: "STRING" }, duration: {type: "STRING"}, category: { type: "STRING" }, details: {type: "STRING"} }, required: ["taskName", "date", "time", "duration", "category", "details"] } } } };
-        const result = await fetchGemini(payload);
-        return JSON.parse(result);
-    }
-
-    async function fetchGemini(payload){
-        const response = await fetch(`${API_BASE_URL}?key=${API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    
+    // 這個函式取代了舊的 callGeminiForPlan 和 fetchGemini
+    // 它的功能是呼叫我們在 Vercel 上的後端代理
+    async function callBackendAPI(prompt) {
+        // API 端點現在是我們自己的後端代理函式
+        const response = await fetch('/api/generate-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // 將 prompt 包在一個 JSON 物件中，作為請求的主體 (body) 發送出去
+            body: JSON.stringify({ prompt: prompt }),
+        });
+    
         if (!response.ok) {
-            const errorBody = await response.text();
-            console.error("API Error Response:", errorBody);
-            if (response.status === 400 && errorBody.includes('API_KEY_INVALID')) {
-                 throw new Error('API 金鑰無效 (400)。請檢查您填入的金鑰是否正確。');
-            }
-            if (response.status === 403) {
-                throw new Error('API 權限不足 (403)。請確認您的 Google Cloud 專案已啟用 API 並設定帳單。');
-            }
-            throw new Error(`AI 服務請求失敗，狀態碼: ${response.status}`);
+            // 如果後端回傳錯誤 (例如 500 或 400)，解析錯誤訊息並拋出
+            const errorResult = await response.json();
+            throw new Error(errorResult.message || `請求失敗，狀態碼: ${response.status}`);
         }
+    
+        // 後端已經幫我們處理好格式，這裡可以直接拿到可用的 JSON 計劃
         const result = await response.json();
-        if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0].text) {
-            return result.candidates[0].content.parts[0].text;
-        } else {
-            console.warn("Unexpected API response structure:", result);
-            if (result.candidates && result.candidates[0].finishReason !== 'STOP') {
-                throw new Error(`API call finished with reason: ${result.candidates[0].finishReason}`);
-            }
-            throw new Error("Invalid response structure from Gemini API.");
-        }
+        return result;
     }
     
+    // --- 頁面載入時執行的事件監聽器 ---
     document.addEventListener('DOMContentLoaded', () => {
-      tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-      const today = new Date().toISOString().split('T')[0];
-      
-      document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
-      document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
-      
-      setupPopovers();
-      setupEventListeners();
-      setupTheme();
-      renderTimelineGrid();
-      handleDateChange();
-      setupCurrentTimeIndicator();
+        // 這部分維持不變
+        tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
+        document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
+        
+        setupPopovers();
+        setupEventListeners();
+        setupTheme();
+        renderTimelineGrid();
+        handleDateChange();
+        setupCurrentTimeIndicator();
     });
 
   </script>
