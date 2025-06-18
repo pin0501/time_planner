@@ -25,7 +25,7 @@ export default async function handler(request, response) {
   }
 
   // 這是真正的 Google Gemini API 端點
-  const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';
+  const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent';
 
   // 這是要發送給 Google API 的請求主體 (payload)
   const payload = {
