@@ -204,6 +204,54 @@
     .task-details.show { max-height: 200px; padding: 0.5rem 1rem 1rem; }
     .details-toggle-btn { transition: transform 0.3s ease; }
     .details-toggle-btn.open { transform: rotate(90deg); }
+
+    /* 新增：智慧時段選擇器樣式 */
+    .timeslot-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--color-input-border);
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+    .timeslot-btn:hover:not(.active) {
+        border-color: var(--color-text-muted);
+        background-color: var(--color-btn-secondary-bg);
+    }
+    .timeslot-btn.active {
+        background-color: var(--color-work);
+        border-color: var(--color-work);
+        color: white;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        transform: translateY(-1px);
+    }
+    .timeslot-btn[data-preset="clear"] {
+        background-color: var(--color-btn-secondary-bg);
+        color: var(--color-text-muted);
+    }
+    .timeslot-btn[data-preset="clear"]:hover {
+        background-color: var(--color-btn-secondary-hover);
+    }
+    .timeslot-hour {
+        height: 32px;
+        background-color: var(--color-btn-secondary-bg);
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    .timeslot-hour:hover {
+        transform: scale(1.05);
+        background-color: var(--color-btn-secondary-hover);
+        z-index: 5;
+    }
+    .timeslot-hour.active {
+        background-color: var(--color-work);
+        transform: scale(1.05);
+    }
   </style>
 </head>
 <body class="p-4 sm:p-6 md:p-8">
@@ -328,13 +376,24 @@
             </div>
 
             <div>
-                <label for="ai-timeslot" class="block mb-2 font-semibold">時段偏好</label>
-                <select id="ai-timeslot" class="form-select">
-                    <option value="任意">任意</option>
-                    <option value="上午">上午 (09:00-12:00)</option>
-                    <option value="下午">下午 (13:00-17:00)</option>
-                    <option value="晚上">晚上 (19:00-22:00)</option>
-                </select>
+                <label class="block mb-2 font-semibold">時段偏好 (可點擊下方時間軸微調)</label>
+                <div id="ai-timeslot-presets" class="flex flex-wrap gap-2 mb-3">
+                    <button type="button" class="timeslot-btn" data-preset="morning">上午</button>
+                    <button type="button" class="timeslot-btn" data-preset="afternoon">下午</button>
+                    <button type="button" class="timeslot-btn" data-preset="evening">晚上</button>
+                    <button type="button" class="timeslot-btn" data-preset="clear">清除</button>
+                </div>
+                <div id="smart-timeslot-bar" class="p-2 border rounded-lg" style="border-color: var(--color-input-border);">
+                    <div class="grid grid-cols-12 sm:grid-cols-24 gap-px">
+                        </div>
+                    <div class="flex justify-between text-xs mt-1" style="color: var(--color-text-muted);">
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>24:00</span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
