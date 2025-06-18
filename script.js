@@ -10,7 +10,8 @@ const aiPlannerState = {
     goal: '',
     goalType: '無',
     intensity: '無',
-    timeSlot: '任意'
+    // 預設選中早上8點到晚上10點 (22點)
+    timeSlotHours: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22] 
 };
 
 const HOUR_HEIGHT = 60; 
@@ -24,6 +25,22 @@ const CATEGORIES = {
     default:  { name: '預設', color: '#9ca3af' }
 };
 
+// --- 頁面載入時執行的主要事件監聽器 ---
+document.addEventListener('DOMContentLoaded', () => {
+    tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    const today = new Date().toISOString().split('T')[0];
+    
+    document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
+    document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
+    
+    setupPopovers();
+    setupEventListeners();
+    setupTheme();
+    renderTimelineGrid();
+    handleDateChange();
+    setupCurrentTimeIndicator();
+});
+
 function setupEventListeners() {
     document.getElementById('date-start').addEventListener('change', handleDateChange);
     document.getElementById('date-end').addEventListener('change', handleDateChange);
@@ -35,9 +52,11 @@ function setupEventListeners() {
     document.getElementById('ai-goal-input').addEventListener('input', (e) => aiPlannerState.goal = e.target.value);
     document.getElementById('ai-goal-type').addEventListener('change', (e) => aiPlannerState.goalType = e.target.value);
     document.getElementById('ai-intensity').addEventListener('change', (e) => aiPlannerState.intensity = e.target.value);
-    document.getElementById('ai-timeslot').addEventListener('change', (e) => aiPlannerState.timeSlot = e.target.value);
+
+    setupSmartTimeSlots(); // 設定智慧時段選擇器
 }
 
+// --- 主題切換 ---
 function setupTheme() {
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
     document.getElementById('theme-checkbox').checked = isDarkMode;
@@ -49,6 +68,7 @@ function toggleTheme(e) {
     localStorage.setItem('darkMode', e.target.checked);
 }
 
+// --- 新增任務區域的 Popover 設定 ---
 function setupPopovers() {
     const timePopover = document.getElementById('time-popover');
     timePopover.innerHTML = '';
@@ -133,6 +153,7 @@ function selectAddTaskCategory(categoryKey) {
     });
 }
 
+// --- 日期處理與渲染 ---
 function handleDateChange() {
     const start = document.getElementById('date-start').value;
     const end = document.getElementById('date-end').value;
@@ -152,8 +173,6 @@ function handleDateChange() {
         updateCurrentTimeIndicator();
     }
 }
-
-function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
 
 function renderDateNavigation() {
     const container = document.getElementById('date-navigation');
@@ -217,28 +236,31 @@ function createButtonGroup(items, type, activeItem, onClick) {
         btn.className = `btn date-nav-btn ${typeClass}`;
         
         let value, text;
-        if (type === 'year') {
-            value = item;
-            text = `${item}年`;
-        } else if (type === 'month') {
-            value = item;
-            text = `${item + 1}月`;
-        } else { 
-            value = item;
-            text = new Date(item).getDate();
-        }
+        if (type === 'year') { value = item; text = `${item}年`; } 
+        else if (type === 'month') { value = item; text = `${item + 1}月`; } 
+        else { value = item; text = new Date(item).getDate(); }
 
         btn.dataset.value = value;
         btn.textContent = text;
-        if (value == activeItem) {
-            btn.classList.add('active');
-        }
+        if (value == activeItem) btn.classList.add('active');
         btn.addEventListener('click', (e) => onClick(e.target.dataset.value));
         wrapper.appendChild(btn);
     });
     return wrapper;
 }
 
+function getDatesBetween(start, end) {
+    const dates = [];
+    let current = new Date(new Date(start).setUTCHours(0,0,0,0));
+    const stop = new Date(new Date(end).setUTCHours(0,0,0,0));
+    while (current <= stop) {
+        dates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+// --- 任務列表與時間軸渲染 ---
 function renderTasks() {
     document.getElementById('date-display').textContent = selectedDate;
     const list = document.getElementById('task-list');
@@ -282,9 +304,7 @@ function renderTasks() {
             `;
             list.appendChild(li);
         });
-        document.querySelectorAll('.details-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', toggleDetails);
-        });
+        document.querySelectorAll('.details-toggle-btn').forEach(btn => btn.addEventListener('click', toggleDetails));
     }
     renderTimeline(filteredTasks);
 }
@@ -338,7 +358,7 @@ function renderTimeline(dayTasks) {
             taskEl.style.width = `calc(${(1 / totalColumns) * 100}% - 7px)`;
             
             const rgb = hexToRgb(taskColor);
-            if(rgb){
+            if(rgb) {
                 taskEl.style.setProperty('--task-bg-start', `rgba(${rgb}, 0.85)`);
                 taskEl.style.setProperty('--task-bg-end', `rgba(${rgb}, 0.65)`);
             }
@@ -348,17 +368,6 @@ function renderTimeline(dayTasks) {
             tasksContainer.appendChild(taskEl);
         });
     });
-}
-
-function getDatesBetween(start, end) {
-  const dates = [];
-  let current = new Date(new Date(start).setUTCHours(0,0,0,0));
-  const stop = new Date(new Date(end).setUTCHours(0,0,0,0));
-  while (current <= stop) {
-    dates.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 1);
-  }
-  return dates;
 }
 
 function getTaskTimeRange(time, duration) {
@@ -416,41 +425,40 @@ function updateCurrentTimeIndicator() {
     }
 }
 
+// --- 任務 CRUD (Create, Read, Update, Delete) ---
+function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
+
 function addTaskFromInput(){
-  const input = document.getElementById('task-input');
-  const name = input.value.trim();
-  if (!name) { showToast('請輸入任務內容！', 'error'); return; }
-  if (!selectedDate) { showToast('請先選擇一個日期！', 'error'); return; }
-  
-  createTask(name, selectedAddTaskTime, selectedDate, selectedAddTaskDuration, selectedAddTaskCategory, '');
-  
-  input.value = '';
-  selectedAddTaskTime = '';
-  selectedAddTaskDuration = '60';
-  selectAddTaskCategory('default');
-  document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('active'));
-  showToast('任務新增成功！', 'success');
+    const input = document.getElementById('task-input');
+    const name = input.value.trim();
+    if (!name) { showToast('請輸入任務內容！', 'error'); return; }
+    if (!selectedDate) { showToast('請先選擇一個日期！', 'error'); return; }
+    
+    createTask(name, selectedAddTaskTime, selectedDate, selectedAddTaskDuration, selectedAddTaskCategory, '');
+    
+    input.value = '';
+    selectedAddTaskTime = '';
+    selectedAddTaskDuration = '60';
+    selectAddTaskCategory('default');
+    document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('active'));
+    showToast('任務新增成功！', 'success');
 }
 
 function createTask(name, time, date, duration, category, details) {
-  if (!name || !date) return;
-  tasks.push({ name, time: time || '', date, duration: duration || '60', category: category || 'default', details: details || '', done: false });
-  saveTasks();
-  if (date === selectedDate) {
-      renderTasks();
-  }
+    if (!name || !date) return;
+    tasks.push({ name, time: time || '', date, duration: duration || '60', category: category || 'default', details: details || '', done: false });
+    saveTasks();
+    if (date === selectedDate) renderTasks();
 }
 
 function toggleTask(index) {
-  tasks[index].done = !tasks[index].done;
-  saveTasks();
-  renderTasks();
+    tasks[index].done = !tasks[index].done;
+    saveTasks();
+    renderTasks();
 }
 
 function confirmDeleteTask(index) {
-    showConfirmation('確定要刪除此任務嗎？', '此操作無法復原。', () => {
-        deleteTask(index);
-    });
+    showConfirmation('確定要刪除此任務嗎？', '此操作無法復原。', () => deleteTask(index));
 }
 
 function deleteTask(index) {
@@ -461,16 +469,14 @@ function deleteTask(index) {
 }
 
 function confirmClearTasks() {
-    showConfirmation('確定要清除所有任務嗎？', '此操作將清除所有日期的所有任務，無法復原。', () => {
-        clearTasks();
-    });
+    showConfirmation('確定要清除所有任務嗎？', '此操作將清除所有日期的所有任務，無法復原。', () => clearTasks());
 }
 
 function clearTasks() {
-  tasks = [];
-  saveTasks();
-  handleDateChange();
-  showToast('所有任務已清除', 'success');
+    tasks = [];
+    saveTasks();
+    handleDateChange();
+    showToast('所有任務已清除', 'success');
 }
 
 function showEditModal(index) {
@@ -489,9 +495,7 @@ function showEditModal(index) {
         const option = document.createElement('option');
         option.value = key;
         option.textContent = CATEGORIES[key].name;
-        if (key === task.category) {
-            option.selected = true;
-        }
+        if (key === task.category) option.selected = true;
         categorySelect.appendChild(option);
     });
 
@@ -514,51 +518,45 @@ function updateTask() {
     showToast('任務更新成功！', 'success');
 }
 
+// --- 匯入/匯出 ---
 function importTasks(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const importedTasks = JSON.parse(e.target.result);
-      if (Array.isArray(importedTasks)) {
-        tasks = importedTasks;
-        saveTasks();
-
-        if (tasks.length > 0) {
-          const dates = tasks.map(t => new Date(t.date));
-          const minDate = new Date(Math.min(...dates));
-          const maxDate = new Date(Math.max(...dates));
-          const minDateStr = minDate.toISOString().split('T')[0];
-          const maxDateStr = maxDate.toISOString().split('T')[0];
-          document.getElementById('date-start').value = minDateStr;
-          document.getElementById('date-end').value = maxDateStr;
-          selectedDate = minDateStr; 
-        }
-        
-        showToast('成功匯入任務！', 'success');
-        handleDateChange();
-      } else { 
-        throw new Error('檔案格式不符'); 
-      }
-    } catch (err) { 
-      showToast('匯入失敗，請檢查檔案格式。', 'error'); 
-    }
-  };
-  reader.readAsText(file);
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedTasks = JSON.parse(e.target.result);
+            if (Array.isArray(importedTasks)) {
+                tasks = importedTasks;
+                saveTasks();
+                if (tasks.length > 0) {
+                    const dates = tasks.map(t => new Date(t.date));
+                    const minDate = new Date(Math.min(...dates));
+                    const maxDate = new Date(Math.max(...dates));
+                    document.getElementById('date-start').value = minDate.toISOString().split('T')[0];
+                    document.getElementById('date-end').value = maxDate.toISOString().split('T')[0];
+                    selectedDate = minDate.toISOString().split('T')[0]; 
+                }
+                showToast('成功匯入任務！', 'success');
+                handleDateChange();
+            } else { throw new Error('檔案格式不符'); }
+        } catch (err) { showToast('匯入失敗，請檢查檔案格式。', 'error'); }
+    };
+    reader.readAsText(file);
 }
 
 function exportTasks() {
-  if (tasks.length === 0) { showToast('沒有任務可以匯出。', 'error'); return; }
-  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `tasks_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+    if (tasks.length === 0) { showToast('沒有任務可以匯出。', 'error'); return; }
+    const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tasks_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
+// --- Modal & Toast 通用函式 ---
 function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
 
@@ -585,14 +583,94 @@ function showToast(message, type = 'success') {
     toast.className = `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(() => {
-        toast.remove();
-    }, 5000);
+    setTimeout(() => toast.remove(), 5000);
 }
 
-// const API_BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent`;
-// const API_KEY = ""; // 部署到 GitHub Pages 時，請在此填入您自己的 API 金鑰
+// --- 智慧時段選擇器邏輯 ---
+const PRESET_HOURS = {
+    morning: [8, 9, 10, 11],
+    afternoon: [13, 14, 15, 16, 17],
+    evening: [19, 20, 21, 22]
+};
 
+function setupSmartTimeSlots() {
+    const bar = document.querySelector('#smart-timeslot-bar .grid');
+    bar.innerHTML = '';
+    for (let i = 0; i < 24; i++) {
+        const hourBlock = document.createElement('div');
+        hourBlock.className = 'timeslot-hour';
+        hourBlock.dataset.hour = i;
+        bar.appendChild(hourBlock);
+        hourBlock.addEventListener('click', () => handleHourClick(i));
+    }
+    document.querySelectorAll('#ai-timeslot-presets .timeslot-btn').forEach(btn => {
+        btn.addEventListener('click', () => handlePresetClick(btn.dataset.preset));
+    });
+    updateSmartTimeSlotUI();
+}
+
+function handleHourClick(hour) {
+    const index = aiPlannerState.timeSlotHours.indexOf(hour);
+    if (index > -1) aiPlannerState.timeSlotHours.splice(index, 1);
+    else aiPlannerState.timeSlotHours.push(hour);
+    updateSmartTimeSlotUI();
+}
+
+function handlePresetClick(preset) {
+    if (preset === 'clear') {
+        aiPlannerState.timeSlotHours = [];
+    } else {
+        const hoursToAdd = PRESET_HOURS[preset];
+        const isAlreadyAdded = hoursToAdd.every(h => aiPlannerState.timeSlotHours.includes(h));
+        if (isAlreadyAdded) {
+            aiPlannerState.timeSlotHours = aiPlannerState.timeSlotHours.filter(h => !hoursToAdd.includes(h));
+        } else {
+            aiPlannerState.timeSlotHours = [...new Set([...aiPlannerState.timeSlotHours, ...hoursToAdd])];
+        }
+    }
+    updateSmartTimeSlotUI();
+}
+
+function updateSmartTimeSlotUI() {
+    aiPlannerState.timeSlotHours.sort((a,b) => a - b);
+    for (let i = 0; i < 24; i++) {
+        const hourBlock = document.querySelector(`#smart-timeslot-bar [data-hour="${i}"]`);
+        if (hourBlock) hourBlock.classList.toggle('active', aiPlannerState.timeSlotHours.includes(i));
+    }
+    Object.keys(PRESET_HOURS).forEach(preset => {
+        const btn = document.querySelector(`#ai-timeslot-presets [data-preset="${preset}"]`);
+        if (btn) {
+            const isAlreadyAdded = PRESET_HOURS[preset].every(h => aiPlannerState.timeSlotHours.includes(h));
+            btn.classList.toggle('active', isAlreadyAdded);
+        }
+    });
+}
+
+function convertHoursToPromptString() {
+    if (aiPlannerState.timeSlotHours.length === 0) return '任意時段';
+    if (aiPlannerState.timeSlotHours.length === 24) return '全天任意時段';
+
+    const hours = [...aiPlannerState.timeSlotHours];
+    if (hours.length === 0) return '任意時段'; // Double check for safety
+    
+    const ranges = [];
+    let start = hours[0];
+    let end = hours[0];
+
+    for (let i = 1; i < hours.length; i++) {
+        if (hours[i] === end + 1) {
+            end = hours[i];
+        } else {
+            ranges.push(`${String(start).padStart(2, '0')}:00-${String(end + 1).padStart(2, '0')}:00`);
+            start = hours[i];
+            end = hours[i];
+        }
+    }
+    ranges.push(`${String(start).padStart(2, '0')}:00-${String(end + 1).padStart(2, '0')}:00`);
+    return ranges.join(', ');
+}
+
+// --- AI 規劃核心邏輯 ---
 function showAIPlannerModal() {
     const start = document.getElementById('date-start').value;
     const end = document.getElementById('date-end').value;
@@ -605,8 +683,8 @@ function showAIPlannerModal() {
     document.getElementById('ai-goal-input').value = aiPlannerState.goal;
     document.getElementById('ai-goal-type').value = aiPlannerState.goalType;
     document.getElementById('ai-intensity').value = aiPlannerState.intensity;
-    document.getElementById('ai-timeslot').value = aiPlannerState.timeSlot;
-
+    
+    updateSmartTimeSlotUI();
     showModal('ai-planner-modal');
 }
 
@@ -618,97 +696,71 @@ async function generateGlobalPlan() {
     
     const startDate = document.getElementById('date-start').value;
     const endDate = document.getElementById('date-end').value;
-    
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeSlotForPrompt = convertHoursToPromptString();
 
-    // 產生要發送給 AI 的完整提示語
-    let prompt = `你是一位經驗豐富的AI專案規劃助理，擅長根據使用者的總體目標，安排出合理、密集、具可行性的每日行程。
-        請依據以下資訊進行任務規劃：使用者目標：${aiPlannerState.goal}、時間範圍：${startDate} 至 ${endDate}、目標類型：${aiPlannerState.goalType}、安排強度：「${aiPlannerState.intensity}」、時段偏好：「${aiPlannerState.timeSlot}」
-        ---
-        請理解總體目標，將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至時間範圍：${startDate} 至 ${endDate}當中每天**。可為每日安排多個任務細項，避免使任務過於籠統。
-        ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
-        - 'taskName'：具體明確的子任務名稱
-        - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇
-        - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）
-        - 'date'：任務安排的日期（格式：YYYY-MM-DD，必須落在指定時間範圍内）
-        - 'time'：建議的開始時間（格式：HH:MM，需符合偏好時段）
-        - 'details'：數句簡要說明，清楚任務內容與重點
-        請確保：
-        - 相鄰任務之間預設空閒緩衝時段
-        - 每天安排的總任務時間符合指定強度
-        - 任務時間不重疊
-        - 每個子任務都合理可執行，不過度瑣碎，也適當兼顧細節
-        - 若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先聽課，再練習）
-        `;
+    let prompt = `你是一位經驗豐富、嚴謹的AI專案規劃助理，擅長根據使用者的總體目標，安排出合理、密集、具可行性的每日行程。
+    請依據以下資訊進行任務規劃：使用者目標：${aiPlannerState.goal}、時間範圍：${startDate} 至 ${endDate}、目標類型：${aiPlannerState.goalType}、安排強度：「${aiPlannerState.intensity}」、時段偏好：「${timeSlotForPrompt}」
+    ---
+    請理解總體目標，將總體目標拆解為一系列具體子任務，並根據時間範圍與強度，**將每日安排任務的總時數控制在指定範圍內，平均分散至時間範圍：${startDate} 至 ${endDate}當中每天**。可為每日安排多個任務細項，避免使任務過於籠統。
+
+    ### 對每個子任務，請提供以下資訊（回傳格式為 JSON 陣列）：
+    - 'taskName'：具體明確的子任務名稱。
+    - 'category'：任務類別，從 ['work', 'study', 'personal', 'sport', 'chores'] 中選擇。
+    - 'duration'：此任務需要的時間（單位為分鐘，如 30、60、90、120、150）。
+    - 'date'：任務安排的日期（格式：YYYY-MM-DD），**絕對不能超出 ${startDate} 和 ${endDate} 的範圍**。
+    - 'time'：建議的開始時間（格式為 HH:MM，**必須是有效的 24 小時制時間，例如 09:30 或 22:00，不得出現 24:00 或之後的時間**）。
+    - 'details'：數句簡要說明，清楚任務內容與重點。
+
+    ### 請嚴格遵守以下規則：
+    1.  **語言一致性**：所有輸出的文字內容，特別是 'taskName' 和 'details'，**都必須使用與使用者目標相同的語言（繁體中文）**。
+    2.  **時間與日期限制**：嚴格遵守 'date' 和 'time' 的格式與範圍限制，絕不創造不存在的日期或時間。
+    3.  **處理超載任務**：如果總體目標過於繁重，無法在指定時間內完成，你應該優先安排最重要的核心任務。對於排不進的次要任務，請在最後一個任務的 'details' 中附註說明，例如：「部分任務因時間限制未排入，建議延長規劃期間或調整目標。」
+    4.  **任務不重疊**：確保同一天內任務的時間區間不會互相重疊，並在任務間保留適當緩衝。
+    5.  **邏輯順序**：若任務屬於學習或技能訓練，請適度考慮循序漸進的安排（例如先理論，再實作）。
+    `;
     
     showModal('loading-modal');
     hideModal('ai-planner-modal');
 
     try {
-        // 呼叫我們自己的後端代理函式，而不是直接呼叫 Google
         const generatedPlan = await callBackendAPI(prompt);
         
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
         generatedPlan.forEach(task => {
-            // 這段用來過濾掉過去時間的任務，以及確保任務日期在範圍內
             if (task.date === today && task.time < currentTime) return;
             if (new Date(task.date) >= new Date(startDate) && new Date(task.date) <= new Date(endDate)) {
                 createTask(task.taskName, task.time, task.date, task.duration, task.category, task.details);
             } else {
-                // 如果 AI 回傳的日期超出範圍，強制設定為開始日期
                 createTask(task.taskName, task.time, startDate, task.duration, task.category, task.details);
             }
         });
-
         renderTasks();
         showToast('AI 計畫已成功生成！', 'success');
     } catch (error) {
         console.error("Error generating plan:", error);
-        // 顯示從後端傳來的錯誤訊息
         showToast(error.message, "error");
     } finally {
         hideModal('loading-modal');
     }
 }
 
-// 這個函式取代了舊的 callGeminiForPlan 和 fetchGemini
-// 它的功能是呼叫我們在 Vercel 上的後端代理
 async function callBackendAPI(prompt) {
-    // API 端點現在是我們自己的後端代理函式
     const response = await fetch('/api/generate-plan', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        // 將 prompt 包在一個 JSON 物件中，作為請求的主體 (body) 發送出去
         body: JSON.stringify({ prompt: prompt }),
     });
 
     if (!response.ok) {
-        // 如果後端回傳錯誤 (例如 500 或 400)，解析錯誤訊息並拋出
         const errorResult = await response.json();
         throw new Error(errorResult.message || `請求失敗，狀態碼: ${response.status}`);
     }
 
-    // 後端已經幫我們處理好格式，這裡可以直接拿到可用的 JSON 計劃
     const result = await response.json();
     return result;
 }
-
-// --- 頁面載入時執行的事件監聽器 ---
-document.addEventListener('DOMContentLoaded', () => {
-    // 這部分維持不變
-    tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-    const today = new Date().toISOString().split('T')[0];
-    
-    document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
-    document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
-    
-    setupPopovers();
-    setupEventListeners();
-    setupTheme();
-    renderTimelineGrid();
-    handleDateChange();
-    setupCurrentTimeIndicator();
-});
