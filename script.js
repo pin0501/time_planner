@@ -30,8 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
     tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     const today = new Date().toISOString().split('T')[0];
     
-    document.getElementById('date-start').value = localStorage.getItem('plannerDateStart') || today;
-    document.getElementById('date-end').value = localStorage.getItem('plannerDateEnd') || today;
+    // 直接將起始和結束日期設定為今天，忽略 localStorage 的值
+    document.getElementById('date-start').value = today;
+    document.getElementById('date-end').value = today;
     
     setupPopovers();
     setupEventListeners();
